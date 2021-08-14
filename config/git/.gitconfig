@@ -1,0 +1,71 @@
+[core]
+	excludesfile = ~/.gitignore.global
+  preloadindex = true
+  fscache = true
+
+[merge]
+	tool = vscode
+
+[mergetool]
+	prompt = false
+	keepBackup = false
+
+[mergetool "vscode"]
+	cmd = '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code' \"$MERGED\"
+	trustExitCode = false
+
+[user]
+	name = sho
+	email = sskmy1024.y@gmail.com
+
+[init]
+	defaultBranch = master
+
+[commit]
+	template = ~/.gitmessage
+
+[push]
+	default = current
+
+[alias]
+  # Check git alias 
+  alias = !git config --get-regexp '^alias\\.' | sed 's/alias\\.\\([^ ]*\\) \\(.*\\)/\\1\\\t => \\2/' | sort
+
+  # add
+  a = add                           # add
+
+  # commit
+  c = commit -m                     # commit with message
+  ca = commit -am                   # commit all with message
+  ci = commit                       # commit
+  amend = commit --amend            # ammend your last commit
+ 
+  # checkout
+  ch = checkout                     # checkout
+
+  # diff
+  d = diff                          # diff unstaged changes
+  dc = diff --cached                # diff staged changes
+  last = diff HEAD^                 # diff last committed change
+  
+  # log
+  l = log --graph --date=short
+  tree = log --graph --branches --pretty=format:'%C(cyan)[%h]%Creset -%C(cyan bold)%d%Creset %s (%cr) %C(blue)<%an>%Creset'
+ 
+  # pull
+  pl = pull
+  drag = pull --rebase              # Pull using rebase mode (Not merge!!!)
+
+  # push
+  ps = push                         # push
+ 
+  # status
+  s = status                        # status
+  st = status                       # status
+  stat = status                     # status
+  
+[filter "lfs"]
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+  process = git-lfs filter-process

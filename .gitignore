@@ -1,0 +1,17 @@
+# Local config files
+.bashrc_local
+
+# Local font
+**/*.otf
+**/*.ttf
+**/*.sfd
+
+# Project files
+.idea
+.vscode
+tmp
+out
+gen
+
+# macOS
+.DS_Store

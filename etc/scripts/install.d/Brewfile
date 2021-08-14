@@ -1,0 +1,38 @@
+# Brewfile
+cask_args appdir: "/Applications"
+
+tap "homebrew/core"
+tap "homebrew/bundle"
+tap "homebrew/services"
+tap "caskroom/cask"
+tap "homebrew/cask-fonts"
+tap "homebrew/cask-versions"
+tap "caskroom/versions"
+tap "buo/cask-upgrade"
+
+# third party repo
+
+
+# dev tools
+brew "bat"
+brew "binutils"
+brew "coreutils"
+brew "curl"
+brew "gcc"
+brew "git"
+brew "git-lfs"
+brew "jq"
+brew "openssl"
+brew "tmux"
+brew "tree"
+brew "zplug"
+
+# cask apps
+cask "docker"
+cask "google-chrome"
+
+# font
+brew "font-hack-nerd-font"
+
+# useful tools
+brew "ffmpeg"

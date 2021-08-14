@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+# Author: takuzoo3868
+# Last Modified: 16 Feb 2021.
+
+trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
+set -euo pipefail
+
+# set dotfiles path as default variable
+if [ -z "${DOTPATH:-}" ]; then
+    DOTPATH=$HOME/.dotfiles; export DOTPATH
+fi
+CONFPATH=$DOTPATH/config
+
+# load lib script (functions)
+. "$DOTPATH"/etc/lib/header.sh
+
+## create symbolic link
+echo ""
+info "Creating symbolic links..."
+if [ ! -d "$HOME/.local/bin" ]; then
+  mkdir -p "$HOME"/.local/bin
+fi
+symlink "$DOTPATH/etc/scripts/deploy" "$HOME/.local/bin/deploy"
+
+# zsh
+info "zsh..."
+symlink "$CONFPATH/zsh/.zshrc" "$HOME/.zshrc"
+if [ ! -d "$HOME/.zsh" ]; then
+  mkdir -p "$HOME"/.zsh
+fi
+symlink "$CONFPATH/zsh/alias.zsh" "$HOME/.zsh/alias.zsh"
+
+# git
+info "git..."
+symlink "$CONFPATH/git/.gitconfig" "$HOME/.gitconfig"
+symlink "$CONFPATH/git/.gitignore.global" "$HOME/.gitignore.global"
+symlink "$CONFPATH/git/.gitmessage" "$HOME/.gitmessage"
+mkdir -p "$HOME"/.git_template/hooks
+
+# tmux
+info "tmux..."
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+  git clone https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
+fi
+symlink "$CONFPATH/tmux/.tmux.conf" "$HOME/.tmux.conf"
+# echo "  please check --> doc/tmux.md"
+# shellcheck disable=SC2016
+echo '  export PATH="$HOME/.tmux/bin:$PATH"'
+
+# local binary
+info "binary..."
+# shellcheck disable=SC2016
+echo '  export PATH="$HOME/.local/bin:$PATH'
+# shellcheck disable=SC2016
+echo '  export PATH="/opt/local/bin:/opt/local/sbin:$PATH"'
+for i in "$DOTPATH"/bin/*; do
+  ln -sf "$i" "$HOME"/.local/bin/
+done
+echo ""

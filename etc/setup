@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+
+# Author: sskmy1024y
+# Last Modified: 13 Aug 2021.
+
+trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
+set -euo pipefail
+
+# set dotfiles path as default variable
+if [ -z "${DOTPATH:-}" ]; then
+    DOTPATH=$HOME/.dotfiles; export DOTPATH
+fi
+
+# load lib functions
+# use colors on terminal
+tput=$(which tput)
+if [ -n "$tput" ]; then
+  ncolors=$($tput colors)
+fi
+if [ -t 1 ] && [ -n "$ncolors" ] && [ "$ncolors" -ge 8 ]; then
+  RED="$(tput setaf 1)"
+  GREEN="$(tput setaf 2)"
+  YELLOW="$(tput setaf 3)"
+  BOLD="$(tput bold)"
+  NORMAL="$(tput sgr0)"
+else
+  RED=""
+  GREEN=""
+  YELLOW=""
+  BOLD=""
+  NORMAL=""
+fi
+
+### functions
+# info: output terminal green
+info() { 
+  printf "%s" "$GREEN"
+  echo -n "[+] "
+  printf "%s" "$NORMAL"
+  echo "$1"
+}
+# error: output terminal red
+error() {
+  printf "%s" "$RED"
+  echo -n "[-] "
+  printf "%s" "$NORMAL"
+  echo "$1"
+}
+# warn: output terminal yellow
+warn() {
+  printf "%s" "$YELLOW"
+  echo -n "[*] "
+  printf "%s" "$NORMAL"
+  echo "$1"
+}
+# log: out put termial normal
+log() { 
+  echo "  $1" 
+}
+
+# check package & return flag
+is_exists() {
+  which "$1" >/dev/null 2>&1
+  return $?
+}
+
+
+
+### Start install script
+DOTFILES_GITHUB="https://github.com/sskmy1024y/dotfiles.git"; export DOTFILES_GITHUB
+
+# shellcheck disable=SC1078,SC1079,SC2016
+dotfiles_logo='
+      | |     | |  / _(_) |           
+    __| | ___ | |_| |_ _| | ___  ___  
+   / _` |/ _ \| __|  _| | |/ _ \/ __| 
+  | (_| | (_) | |_| | | | |  __/\__ \ 
+   \__,_|\___/ \__|_| |_|_|\___||___/ 
+
+  *** WHAT IS INSIDE? ***
+  1. Download https://github.com/sskmy1024y/dotfiles.git
+  2. Install dev packages
+  3. Symlinking dot files to your home directory
+
+  See the README for documentation.
+  https://github.com/sskmy1024y/dotfiles
+
+  Copyright (c) 2021 "sho" @sskmy1024y
+  Licensed under the MIT license.
+'
+
+printf "%s" "$BOLD"
+echo   "$dotfiles_logo"
+printf "%s" "$NORMAL"
+
+log "*** ATTENTION ***"
+log "This script can change your entire setup."
+log "I recommend to read first. You can even copy commands one by one."
+log "If you use termux on Android, try this."
+log "$ /data/data/com.termux/files/usr/bin/bash"
+echo ""
+read -p "$(warn '(U^w^) < Are you sure you want to install it? [y/N] ')" -n 1 -r
+echo ""
+
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+  echo ""
+  error 'OK. Goodbye.'
+  exit 1
+fi
+
+_download() {
+  info "Downloading dotfiles..."
+
+  if [ ! -d "$DOTPATH" ]; then
+    if is_exists "git"; then
+      git clone "$DOTFILES_GITHUB" "$DOTPATH"
+      info "Downloaded"
+
+    elif is_exists "curl" || is_exists "wget"; then
+      local zip_url="https://github.com/takuzoo3868/dotfiles/archive/master.zip"
+
+      if is_exists "curl"; then
+        curl -L "$zip_url"
+
+      elif is_exists "wget"; then
+        wget -O - "$zip_url"
+      fi | tar xvz
+      
+      if [ ! -d dotfiles-master ]; then
+        error "dotfiles-master: not found"
+        exit 1
+      fi
+      mv -f dotfiles-master "$DOTPATH"
+      info "Downloaded!"
+
+    else
+      error "curl or wget required"
+      exit 1
+    fi
+  else
+    warn "Dotfiles are already installed"
+  fi
+}
+
+_deploy() {
+  info "Deploying dotfiles..."
+  if [ ! -d "$DOTPATH" ]; then
+    error "$DOTPATH: not found"
+    exit 1
+  fi
+  
+  cd "$DOTPATH"
+  make deploy
+  info "Deployed!"
+}
+
+_initialize() {
+  case "$@" in
+    "-i" | "--init" | "init")
+      info "Initializing dotfiles..."
+      cd "$DOTPATH"
+      if [ -f Makefile ]; then
+        make init
+        info "Initialized!"
+      else
+        error "Makefile: not found"
+        exit 1
+      fi
+      ;;
+    *)
+      info "Skipped initialize"
+      ;;
+  esac
+}
+
+# A script for the file named "setup"
+dotfiles_setup() {
+    # 1. Download the repository
+    # ==> downloading
+    # Priority: git > curl > wget
+    _download &&
+
+    # 2. Deploy dotfiles to your home directory
+    # ==> deploying
+    _deploy &&
+
+    # 3. Execute all sh files within etc/init/
+    # ==> initializing
+    _initialize "$@"
+}
+
+dotfiles_setup "$@"
