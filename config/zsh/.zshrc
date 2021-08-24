@@ -1,12 +1,32 @@
 #!/bin/zsh
+
+## =============================
+# * 分割ファイルの読み込み
+## =============================
+ZSHHOME="${HOME}/.zsh"
+
+if [ -d $ZSHHOME -a -r $ZSHHOME -a \
+     -x $ZSHHOME ]; then
+    for i in $ZSHHOME/*; do
+        [[ ${i##*/} = *.zsh ]] &&
+            [ \( -f $i -o -h $i \) -a -r $i ] && . $i
+    done
+fi
+
+
 ## =============================
 # * 環境変数
 ## =============================
 export LANG=ja_JP.UTF-8
 export LC_CTYPE=ja_JP.UTF-8
 export LC_ALL=ja_JP.UTF-8
-export ZPLUG_HOME=/usr/local/opt/zplug
 export PATH=$PATH:$HOME/sh
+if "$(is_arm_darwin)" ; then
+  export PATH=/opt/homebrew/bin:$PATH
+  export ZPLUG_HOME=/opt/homebrew/opt/zplug
+else
+  export ZPLUG_HOME=/usr/local/opt/zplug
+fi
 export PATH=$HOME/.rbenv/bin:$PATH
 export PATH=$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH
 
@@ -23,6 +43,7 @@ zplug 'zsh-users/zsh-completions'
 zplug romkatv/powerlevel10k, as:theme, depth:1
 zplug 'zsh-users/zsh-syntax-highlighting', defer:2
 zplug "zsh-users/zsh-autosuggestions" #履歴から予測
+zplug "paulirish/git-open", as:plugin
 if test `hostname` != '%no_root_host%' ; then
   zplug "b4b4r07/enhancd", use:init.sh  # ディレクトリ移動を高速化（fzf であいまい検索）
 fi
@@ -154,6 +175,71 @@ HISTFILE=~/.zsh_history
 HISTSIZE=1000000
 SAVEHIST=1000000
 
+# lsみながらcdrする
+function select_cdr(){
+    local selected_dir=$(cdr -l | awk '{ print $2 }' | \
+      fzf --preview 'f() { sh -c "ls -hFGl $1" }; f {}')
+    if [ -n "$selected_dir" ]; then
+        BUFFER="cd ${selected_dir}"
+        zle accept-line
+    fi
+    zle clear-screen
+}
+zle -N select_cdr
+bindkey '^@' select_cdr
+
+# treeの一覧からheadしながらファイルを選択する
+function tree_select() {
+  tree -N -a --charset=o -f -I '.git|.idea|resolution-cache|target/streams|node_modules|.DS_Store' | \
+    fzf --preview 'f() {
+      set -- $(echo -- "$@" | grep -o "\./.*$");
+      if [ -d $1 ]; then
+        ls -lh $1
+      else
+        head -n 100 $1
+      fi
+    }; f {}' | \
+      sed -e "s/ ->.*\$//g" | \
+      tr -d '\||`| ' | \
+      tr '\n' ' ' | \
+      sed -e "s/--//g" | \
+      xargs echo
+}
+
+# treeで選択したファイル名を入力する
+function tree_select_buffer(){
+  local SELECTED_FILE=$(tree_select)
+  if [ -n "$SELECTED_FILE" ]; then
+    LBUFFER+="$SELECTED_FILE"
+    CURSOR=$#LBUFFER
+    zle reset-prompt
+  fi
+}
+zle -N tree_select_buffer
+bindkey "^t" tree_select_buffer
+
+# worktree移動
+function cdworktree() {
+    # カレントディレクトリがGitリポジトリ上かどうか
+    git rev-parse &>/dev/null
+    if [ $? -ne 0 ]; then
+        echo fatal: Not a git repository.
+        return
+    fi
+
+    local selectedWorkTreeDir=`git worktree list | fzf | awk '{print $1}'`
+
+    if [ "$selectedWorkTreeDir" = "" ]; then
+        # Ctrl-C.
+        return
+    fi
+
+    cd ${selectedWorkTreeDir}
+}
+
+export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
+export FZF_DEFAULT_OPTS='--height 40% --reverse --border'
+
 
 ## =============================
 # * エイリアスなど
@@ -161,8 +247,11 @@ SAVEHIST=1000000
 alias ll='ls -l'
 alias gitdir='cd ~/sho/Develop/;clear'
 
-eval "$(rbenv init -)"
+eval "$(anyenv init -)"
 eval "$(nodenv init -)"
+if "$(is_arm_darwin)" ; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
 
 
 ## =============================

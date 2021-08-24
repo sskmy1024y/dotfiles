@@ -26,6 +26,8 @@ brew "openssl"
 brew "tmux"
 brew "tree"
 brew "zplug"
+brew "fzf"
+brew "tree"
 
 # cask apps
 cask "docker"
