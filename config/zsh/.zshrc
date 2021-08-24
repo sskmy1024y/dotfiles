@@ -93,7 +93,7 @@ POWERLEVEL9K_DIR_HOME_SUBFOLDER_BACKGROUND='038'
 POWERLEVEL9K_DIR_DEFAULT_BACKGROUND='202'
 POWERLEVEL9K_DIR_ETC_BACKGROUND='007'
 
-DEFAULT_USER='sho'
+DEFAULT_USER=$USER
 
 POWERLEVEL9K_CONTEXT_REMOTE_FOREGROUND='041'
 POWERLEVEL9K_CONTEXT_REMOTE_SUDO_BACKGROUND='009'
@@ -247,8 +247,13 @@ export FZF_DEFAULT_OPTS='--height 40% --reverse --border'
 alias ll='ls -l'
 alias gitdir='cd ~/sho/Develop/;clear'
 
-eval "$(anyenv init -)"
-eval "$(nodenv init -)"
+if is_exists "anyenv"; then
+  eval "$(anyenv init -)"
+fi
+if is_exists "nodenv"; then
+  eval "$(nodenv init -)"
+fi
+
 if "$(is_arm_darwin)" ; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi

@@ -24,7 +24,14 @@ is_arm_darwin() {
           echo true ;;
         *)
           echo false ;;
+      esac ;;
     *)
       echo false ;;
   esac
+}
+
+# check package & return flag
+is_exists() {
+    which "$1" >/dev/null 2>&1
+    return $?
 }
