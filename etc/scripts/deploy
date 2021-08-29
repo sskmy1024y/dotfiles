@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Author: takuzoo3868
-# Last Modified: 16 Feb 2021.
+# Author: sskmy1024y
+# Last Modified: 29 Aug 2021.
 
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
@@ -30,6 +30,12 @@ if [ ! -d "$HOME/.zsh" ]; then
   mkdir -p "$HOME"/.zsh
 fi
 symlink "$CONFPATH/zsh/00_header.zsh" "$HOME/.zsh/00_header.zsh"
+symlink "$CONFPATH/zsh/10_environment.zsh" "$HOME/.zsh/10_environment.zsh"
+symlink "$CONFPATH/zsh/20_alias.zsh" "$HOME/.zsh/20_alias.zsh"
+symlink "$CONFPATH/zsh/30_zplug.zsh" "$HOME/.zsh/30_zplug.zsh"
+symlink "$CONFPATH/zsh/32_prompt.zsh" "$HOME/.zsh/32_prompt.zsh"
+symlink "$CONFPATH/zsh/33_completion.zsh" "$HOME/.zsh/33_completion.zsh"
+symlink "$CONFPATH/zsh/40_fzf.zsh" "$HOME/.zsh/40_fzf.zsh"
 
 # ssh
 info "ssh .."
