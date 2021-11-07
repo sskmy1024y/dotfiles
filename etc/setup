@@ -117,7 +117,7 @@ _download() {
       info "Downloaded"
 
     elif is_exists "curl" || is_exists "wget"; then
-      local zip_url="https://github.com/takuzoo3868/dotfiles/archive/master.zip"
+      local zip_url="https://github.com/sskmy1024y/dotfiles/archive/master.zip"
 
       if is_exists "curl"; then
         curl -L "$zip_url"
