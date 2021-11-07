@@ -80,6 +80,11 @@ symlink() {
   [ -e "$2" ] || ln -sf "$1" "$2"
 }
 
+# create symlink using wildcard
+wild_symlink() {
+  ls $1 | xargs -n1 basename | xargs -I{} ln -sf $(dirname $1 | head -n1)/{} $2{}
+}
+
 # estimate os  
 detect_os() {
   case "$(uname -s)" in

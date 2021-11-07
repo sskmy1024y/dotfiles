@@ -29,13 +29,7 @@ symlink "$CONFPATH/zsh/.zshrc" "$HOME/.zshrc"
 if [ ! -d "$HOME/.zsh" ]; then
   mkdir -p "$HOME"/.zsh
 fi
-symlink "$CONFPATH/zsh/00_header.zsh" "$HOME/.zsh/00_header.zsh"
-symlink "$CONFPATH/zsh/10_environment.zsh" "$HOME/.zsh/10_environment.zsh"
-symlink "$CONFPATH/zsh/20_alias.zsh" "$HOME/.zsh/20_alias.zsh"
-symlink "$CONFPATH/zsh/30_zplug.zsh" "$HOME/.zsh/30_zplug.zsh"
-symlink "$CONFPATH/zsh/32_prompt.zsh" "$HOME/.zsh/32_prompt.zsh"
-symlink "$CONFPATH/zsh/33_completion.zsh" "$HOME/.zsh/33_completion.zsh"
-symlink "$CONFPATH/zsh/40_fzf.zsh" "$HOME/.zsh/40_fzf.zsh"
+wild_symlink "$CONFPATH/zsh/*.zsh" "$HOME/.zsh/"
 
 # ssh
 info "ssh .."
