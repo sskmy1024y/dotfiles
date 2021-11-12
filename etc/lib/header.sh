@@ -82,7 +82,7 @@ symlink() {
 
 # create symlink using wildcard
 wild_symlink() {
-  ls $1 | xargs -n1 basename | xargs -I{} ln -sf $(dirname $1 | head -n1)/{} $2{}
+  ls $1 | xargs -n1 basename | xargs -I{} ln -sf $(ls $1 | head -n1 | xargs dirname)/{} $2{}
 }
 
 # estimate os  
