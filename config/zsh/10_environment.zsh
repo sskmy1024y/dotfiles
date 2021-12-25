@@ -5,6 +5,7 @@ export LANG=ja_JP.UTF-8
 export LC_CTYPE=ja_JP.UTF-8
 export LC_ALL=ja_JP.UTF-8
 export PATH=$PATH:$HOME/sh
+export PATH=$HOME/.local/bin:$PATH
 if "$(is_arm_darwin)" ; then
   export PATH=/opt/homebrew/bin:$PATH
   export ZPLUG_HOME=/opt/homebrew/opt/zplug
