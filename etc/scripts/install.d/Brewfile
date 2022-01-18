@@ -28,14 +28,14 @@ brew "zplug"
 brew "fzf"
 brew "tree"
 
-brew "google-cloud-sdk"
+cask "google-cloud-sdk"
 
 # cask apps
 cask "docker"
 cask "google-chrome"
 
 # font
-brew "font-hack-nerd-font"
+cask "font-hack-nerd-font"
 
 # useful tools
 brew "ffmpeg"
