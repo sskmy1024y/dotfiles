@@ -20,9 +20,11 @@ info "97 Install applications via brew"
 echo ""
 
 ubuntu() {
+  echo ""
 }
 
 archlinux() {
+  echo ""
 }
 
 darwin() {
@@ -55,6 +57,7 @@ darwin() {
 }
 
 android() {
+  echo ""
 }
 
 case $(detect_os) in
