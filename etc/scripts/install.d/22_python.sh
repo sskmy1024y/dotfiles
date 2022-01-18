@@ -22,12 +22,12 @@ echo ""
 # install python
 install_python(){
   if is_exists "pyenv"; then
-    if [ ! -d "$HOME/.anyenv/envs/pyenv/versions/2.7.15" ]; then
+    if [ ! -d "$HOME/.anyenv/envs/pyenv/versions/2.7.18" ]; then
       pyenv install 2.7.15
     fi
-    if [ ! -d "$HOME/.anyenv/envs/pyenv/versions/3.7.0" ]; then
-      pyenv install 3.7.0
-      pyenv global 3.7.0
+    if [ ! -d "$HOME/.anyenv/envs/pyenv/versions/3.9.1" ]; then
+      pyenv install 3.9.1
+      pyenv global 3.9.1
     fi
     info "Installed python 2.7 & 3.7"
     exec $SHELL -l
