@@ -16,7 +16,7 @@ fi
 
 
 echo ""
-info "31 Install Node"
+info "21 Install Node"
 echo ""
 
 # install python
@@ -35,12 +35,7 @@ install_node(){
   fi
 }
 
-if is_exists "nodenv"; then
-  install_node
-else
-  install_anyenv
-  install_node
-fi
+install_node
 
 if is_exists "yarn"; then
   info "Installed yarn."

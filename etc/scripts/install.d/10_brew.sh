@@ -17,7 +17,7 @@ fi
 
 brewery() {
   echo ""
-  info "20 Brew bundle"
+  info "10 Brew bundle"
   echo ""
 
   if is_exists "brew"; then

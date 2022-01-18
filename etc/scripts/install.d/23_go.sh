@@ -19,16 +19,21 @@ echo ""
 info "22 Install Golang"
 echo ""
 
-# curl -LO "https://get.golang.org/$(uname)/go_installer"
-# chmod +x go_installer
-# ./go_installer
-# rm go_installer
+# install golang
+install_golang(){
+  if is_exists "goenv"; then
+    if [ ! -d "$HOME/.anyenv/envs/goenv/versions/1.16.7" ]; then
+      goenv install 1.16.7
+      goenv global 1.16.7
+    fi
+    info "Installed golang 1.16.7"
+    source "$HOME"/.zshrc
+  else
+    warn "goenv not found. installing..."
+    install_anyenv
+    install_python
+  fi
+}
 
-# export PATH=$PATH:$HOME/.go/bin
-# export GOPATH=$HOME/go
-# export PATH=$PATH:$GOPATH/bin
 
-# mkdir -p $HOME/src $HOME/bin
-
-# go get github.com/x-motemen/ghq
-# go get github.com/peco/peco/cmd/peco
+install_golang

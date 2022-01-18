@@ -23,7 +23,7 @@ init: ## Setup environment settings
 deep: ## Setup more finicky settings
 	@echo '==> Start to install a variety of tools.'
 	@echo ''
-	@find $(DOTPATH)/etc/scripts/deep.d -name "[0-9][0-9]*.sh"
+	@find $(DOTPATH)/etc/scripts/deep.d -name "[0-9][0-9]*.sh" | sort | bash
 
 install: deploy init ## Run make deploy, init
 	@exec $$SHELL

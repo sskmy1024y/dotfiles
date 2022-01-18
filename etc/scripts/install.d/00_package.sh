@@ -16,7 +16,7 @@ fi
 
 
 echo ""
-info "10 Install Dev packages"
+info "00 Install Dev packages"
 echo ""
 
 PKG_DEFAULT="git tmux curl zsh"

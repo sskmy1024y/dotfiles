@@ -18,7 +18,7 @@ LOCALRC=$HOME/.bash/local.bash
 
 install_anyenv() {
   echo ""
-  info "30 Install any environment managers"
+  info "20 Install any environment managers"
   echo ""
 
   if is_exists "anyenv"; then

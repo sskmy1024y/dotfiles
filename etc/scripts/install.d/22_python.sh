@@ -16,7 +16,7 @@ fi
 
 
 echo ""
-info "32 Install Python"
+info "22 Install Python"
 echo ""
 
 # install python
@@ -38,23 +38,11 @@ install_python(){
   fi
 }
 
-if is_exists "pyenv"; then
-  install_python
-else
-  install_anyenv
-  install_python
-fi
+
+install_python
 
 if is_exists "pipenv"; then
-  info "Installed pyenv & pipenv."
+  info "Installed pipenv."
 else
   brew install pipenv
 fi
-
-# echo ""
-# info "Check PIPENV_VENV_IN_PROJECT..."
-# if $(cat "$HOME"/.bashrc_local | grep PIPENV_VENV_IN_PROJECT > /dev/null) ; then
-#   info "export is OK"
-# else
-#   warn "export is NG --> bashrc_local"
-# fi
