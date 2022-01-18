@@ -18,15 +18,17 @@ LOCALRC=$HOME/.bash/local.bash
 
 install_anyenv() {
   echo ""
-  info "20 Install any environment managers"
+  info "30 Install any environment managers"
   echo ""
 
   if is_exists "anyenv"; then
     info "anyenv is already installed"
   else
     warn "anyenv has not installed yet"
-    git clone https://github.com/anyenv/anyenv.git "$HOME"/.anyenv
-    source "$HOME"/.bashrc
+    if [ -z "${HOME}/.anyenv" ]; then
+      git clone https://github.com/anyenv/anyenv.git "$HOME"/.anyenv
+    fi
+    source "$HOME"/.zshrc
 
     # plugins
     mkdir -p "$HOME"/.anyenv/plugins
@@ -65,10 +67,10 @@ EOF
   source "$HOME"/.bashrc
   anyenv install --init
 
-  for l in pyenv jenv rbenv nodenv; do
+  for l in goenv pyenv jenv rbenv nodenv; do
     anyenv install $l
   done
-  info "Installed python, java, ruby and node environment"
+  info "Installed go, python, java, ruby and node environment"
 }
 
 install_anyenv

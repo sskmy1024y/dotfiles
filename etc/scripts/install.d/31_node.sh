@@ -16,7 +16,7 @@ fi
 
 
 echo ""
-info "21 Install Node"
+info "31 Install Node"
 echo ""
 
 # install python
@@ -27,10 +27,10 @@ install_node(){
       nodenv global 16.4.0
     fi
     info "Installed node 16.4.0"
-    source "$HOME"/.bashrc
+    source "$HOME"/.zshrc
   else
     warn "nodenv not found. installing..."
-    install_langenv
+    install_anyenv
     install_node
   fi
 }
@@ -38,7 +38,7 @@ install_node(){
 if is_exists "nodenv"; then
   install_node
 else
-  install_langenv
+  install_anyenv
   install_node
 fi
 

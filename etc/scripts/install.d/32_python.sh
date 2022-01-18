@@ -16,7 +16,7 @@ fi
 
 
 echo ""
-info "21 Install Python"
+info "32 Install Python"
 echo ""
 
 # install python
@@ -30,10 +30,10 @@ install_python(){
       pyenv global 3.7.0
     fi
     info "Installed python 2.7 & 3.7"
-    source "$HOME"/.bashrc
+    source "$HOME"/.zshrc
   else
     warn "pyenv not found. installing..."
-    install_langenv
+    install_anyenv
     install_python
   fi
 }
@@ -41,7 +41,7 @@ install_python(){
 if is_exists "pyenv"; then
   install_python
 else
-  install_langenv
+  install_anyenv
   install_python
 fi
 
