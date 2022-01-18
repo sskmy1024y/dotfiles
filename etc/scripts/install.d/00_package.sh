@@ -26,8 +26,8 @@ ubuntu() {
 
   sudo apt update -q -y
   sudo apt upgrade -y
-  sudo apt install -q -y "$PKG_DEFAULT"
-  sudo apt install -q -y "$PKG_UBUNTU"
+  sudo apt install -q -y $PKG_DEFAULT
+  sudo apt install -q -y $PKG_UBUNTU
 }
 
 archlinux() {
@@ -40,8 +40,8 @@ archlinux() {
   fi
   
   yay -Syu --noconfirm
-  yay -S --needed "$PKG_DEFAULT"
-  yay -S --needed "$PKG_ARCH"
+  yay -S --needed $PKG_DEFAULT
+  yay -S --needed $PKG_ARCH
 }
 
 darwin() {
@@ -64,16 +64,16 @@ darwin() {
     brew tap caskroom/cask
   fi
 
-  brew install "$PKG_DEFAULT"
-  brew install "$PKG_OSX"
+  brew install $PKG_DEFAULT
+  brew install $PKG_OSX
 }
 
 android() {
   PKG_ANDROID="ncurses-utils binutils coreutils file grep wget taskwarrior neovim"
 
   pkg update
-  pkg install "$PKG_DEFAULT"
-  pkg install "$PKG_ANDROID"
+  pkg install $PKG_DEFAULT
+  pkg install $PKG_ANDROID
   termux-setup-storage
 }
 

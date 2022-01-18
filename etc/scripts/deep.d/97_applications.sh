@@ -37,6 +37,21 @@ darwin() {
 
   info "Initialing AltTab.app"
   brew install alt-tab
+
+  info "Google Chrome.app"
+  brew install --cask "google-chrome"
+
+  info "1password.app"
+  brew install --cask "1password"
+  
+  info "Visual Studio Code.app"
+  brew install --cask "visual-studio-code"
+
+  info "InteliJ.app"
+  brew install --cask "intellij-idea"
+
+  info "Figma.app"
+  brew install --cask "figma"
 }
 
 android() {

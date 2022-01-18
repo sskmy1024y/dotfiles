@@ -11,7 +11,6 @@ tap "buo/cask-upgrade"
 
 # third party repo
 
-
 # dev tools
 brew "bat"
 brew "binutils"
@@ -32,10 +31,7 @@ cask "google-cloud-sdk"
 
 # cask apps
 cask "docker"
-cask "google-chrome"
 
 # font
 cask "font-hack-nerd-font"
 
-# useful tools
-brew "ffmpeg"
