@@ -15,3 +15,4 @@ gen
 
 # macOS
 .DS_Store
+*Brewfile.lock.json

@@ -37,11 +37,11 @@ darwin() {
     info "brew: installed successfully."
   fi
 
-  info "Initialing AltTab.app"
-  brew install alt-tab
-
   info "Google Chrome.app"
   brew install --cask "google-chrome"
+
+  info "iTerm2.app"
+  brew install --cask "iterm2"
 
   info "1password.app"
   brew install --cask "1password"
@@ -54,6 +54,9 @@ darwin() {
 
   info "Figma.app"
   brew install --cask "figma"
+
+  info "Initialing AltTab.app"
+  brew install alt-tab
 }
 
 android() {
