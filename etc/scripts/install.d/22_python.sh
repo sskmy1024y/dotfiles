@@ -30,7 +30,7 @@ install_python(){
       pyenv global 3.7.0
     fi
     info "Installed python 2.7 & 3.7"
-    source "$HOME"/.zshrc
+    exec $SHELL -l
   else
     warn "pyenv not found. installing..."
     install_anyenv

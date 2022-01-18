@@ -27,7 +27,7 @@ install_node(){
       nodenv global 16.4.0
     fi
     info "Installed node 16.4.0"
-    source "$HOME"/.zshrc
+    exec $SHELL -l
   else
     warn "nodenv not found. installing..."
     install_anyenv

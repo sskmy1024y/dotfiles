@@ -27,7 +27,7 @@ install_golang(){
       goenv global 1.16.7
     fi
     info "Installed golang 1.16.7"
-    source "$HOME"/.zshrc
+    exec $SHELL -l
   else
     warn "goenv not found. installing..."
     install_anyenv

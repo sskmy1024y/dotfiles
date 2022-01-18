@@ -28,7 +28,7 @@ install_anyenv() {
     if [ -z "${HOME}/.anyenv" ]; then
       git clone https://github.com/anyenv/anyenv.git "$HOME"/.anyenv
     fi
-    source "$HOME"/.zshrc
+    exec $SHELL -l
 
     # plugins
     mkdir -p "$HOME"/.anyenv/plugins
@@ -59,12 +59,12 @@ fi
 
 EOF
     # shellcheck disable=SC1091
-    source "$HOME"/.zshrc
+    exec $SHELL -l
   fi
   
   "$HOME"/.anyenv/bin/anyenv init
   # exec $SHELL -l
-  source "$HOME"/.zshrc
+  exec $SHELL -l
   anyenv install --init
 
   for l in goenv pyenv jenv rbenv nodenv; do
