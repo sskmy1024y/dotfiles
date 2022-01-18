@@ -29,6 +29,8 @@ brew "zplug"
 brew "fzf"
 brew "tree"
 
+brew "google-cloud-sdk"
+
 # cask apps
 cask "docker"
 cask "google-chrome"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Author: takuzoo3868
-# Last Modified: 17 Feb 2021.
+# Author: sskmy1024y
+# Last Modified: 14 Jan 2022.
 
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
@@ -15,11 +15,17 @@ fi
 . "$DOTPATH"/etc/lib/header.sh
 
 
-brewery() {
-  echo ""
-  info "10 Brew bundle"
-  echo ""
+echo ""
+info "97 Install applications via brew"
+echo ""
 
+ubuntu() {
+}
+
+archlinux() {
+}
+
+darwin() {
   if is_exists "brew"; then
     info "Homebrew is already installed"
   else
@@ -29,19 +35,20 @@ brewery() {
     info "brew: installed successfully."
   fi
 
-  builtin cd "$DOTPATH"/etc/scripts/install.d
-  if [ ! -f Brewfile ]; then
-    error "Brewfile: not found"
-  else
-    brew bundle
-    info "brew: tapped successfully."
-  fi
-  builtin cd "$DOTPATH"
+  info "Initialing AltTab.app"
+  brew install alt-tab
+}
+
+android() {
 }
 
 case $(detect_os) in
+  ubuntu)
+    ubuntu ;;
+  archlinux)
+    archlinux ;;
   darwin)
-    brewery ;;
-  *)
-    info "Skip 10-brew" ;;
+    darwin ;;
+  android)
+    android ;;
 esac
