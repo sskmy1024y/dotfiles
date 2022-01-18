@@ -20,9 +20,11 @@ info "99 Deploy other settings"
 echo ""
 
 ubuntu() {
+  echo ""
 }
 
 archlinux() {
+  echo ""
 }
 
 darwin() {
@@ -61,6 +63,7 @@ darwin() {
 }
 
 android() {
+  echo ""
 }
 
 case $(detect_os) in
