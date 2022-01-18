@@ -10,7 +10,7 @@ set -euo pipefail
 if [ -z "${DOTPATH:-}" ]; then
     DOTPATH=$HOME/.dotfiles; export DOTPATH
 fi
-LOCALRC=$HOME/.bash/local.bash
+LOCALRC=$HOME/.zsh/11_local_environment.zsh
 
 # load lib script (functions)
 . "$DOTPATH"/etc/lib/header.sh
@@ -59,12 +59,12 @@ fi
 
 EOF
     # shellcheck disable=SC1091
-    source "$HOME"/.bashrc
+    source "$HOME"/.zshrc
   fi
   
   "$HOME"/.anyenv/bin/anyenv init
   # exec $SHELL -l
-  source "$HOME"/.bashrc
+  source "$HOME"/.zshrc
   anyenv install --init
 
   for l in goenv pyenv jenv rbenv nodenv; do
