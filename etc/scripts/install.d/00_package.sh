@@ -65,7 +65,7 @@ darwin() {
   fi
 
   brew install $PKG_DEFAULT
-  brew install $PKG_OSX
+  # brew install $PKG_OSX
 }
 
 android() {
