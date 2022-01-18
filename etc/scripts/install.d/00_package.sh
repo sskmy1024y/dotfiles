@@ -54,7 +54,7 @@ darwin() {
     head -n 1 | awk -F"*" '{print $2}' |
     sed -e 's/^ *//' |
     tr -d '\n')
-  softwareupdate -i "$PROD" -v;
+  softwareupdate -i "$PROD" --verbose;
 
   # install brew
   if ! hash brew 2> /dev/null; then
