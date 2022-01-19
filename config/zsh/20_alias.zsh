@@ -5,11 +5,21 @@ alias ll='ls -l'
 alias gitdir='cd ~/sho/Develop/;clear'
 alias la='ls -la'
 
+# anyenv
 if is_exists "anyenv"; then
-  eval "$(anyenv init -)"
+   if ! [ -f /tmp/anyenv.cache ]; then
+      anyenv init - --no-rehash > /tmp/anyenv.cache
+      zcompile /tmp/anyenv.cache
+   fi
+   source /tmp/anyenv.cache
 fi
+
 if is_exists "nodenv"; then
-  eval "$(nodenv init -)"
+   if ! [ -f /tmp/nodenv.cache ]; then
+      nodenv init - > /tmp/nodenv.cache
+      zcompile /tmp/nodenv.cache
+   fi
+   source /tmp/nodenv.cache
 fi
 
 if "$(is_arm_darwin)" ; then
