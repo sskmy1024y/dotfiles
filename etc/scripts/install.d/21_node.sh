@@ -37,6 +37,10 @@ install_node(){
 
 install_node
 
+if is_exists "nodenv"; then
+  git clone https://github.com/nodenv/nodenv-package-json-engine.git $(nodenv root)/plugins/nodenv-package-json-engine
+fi
+
 if is_exists "yarn"; then
   info "Installed yarn."
 else
