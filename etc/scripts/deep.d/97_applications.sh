@@ -55,6 +55,9 @@ darwin() {
   info "Figma.app"
   brew install --cask "figma"
 
+  info "Monitor Control.app"
+  brew install --cask monitorcontrol
+
   info "Initialing AltTab.app"
   brew install alt-tab
 }
