@@ -53,6 +53,7 @@ info "git..."
 symlink "$CONFPATH/git/.gitconfig" "$HOME/.gitconfig"
 symlink "$CONFPATH/git/.gitignore.global" "$HOME/.gitignore.global"
 symlink "$CONFPATH/git/.gitmessage" "$HOME/.gitmessage"
+symlink "$CONFPATH/git/.czrc" "$HOME/.czrc"
 mkdir -p "$HOME"/.git_template/hooks
 
 # tmux

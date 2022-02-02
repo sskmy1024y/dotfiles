@@ -46,3 +46,10 @@ if is_exists "yarn"; then
 else
   npm install -g yarn
 fi
+
+if is_exists "git-cz"; then
+  info "Installed git-cz."
+else
+  npm install -g commitizen
+  npm install -g cz-conventional-changelog
+fi
