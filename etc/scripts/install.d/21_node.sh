@@ -51,5 +51,5 @@ if is_exists "git-cz"; then
   info "Installed git-cz."
 else
   npm install -g commitizen
-  npm install -g cz-conventional-changelog
+  npm install -g cz-emoji
 fi

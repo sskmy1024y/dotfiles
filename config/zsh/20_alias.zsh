@@ -22,6 +22,14 @@ if is_exists "nodenv"; then
    source /tmp/nodenv.cache
 fi
 
+if is_exists "pyenv"; then
+   if ! [ -f /tmp/pyenv.cache ]; then
+      pyenv init - > /tmp/pyenv.cache
+      zcompile /tmp/pyenv.cache
+   fi
+   source /tmp/pyenv.cache
+fi
+
 if "$(is_arm_darwin)" ; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi

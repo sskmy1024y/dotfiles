@@ -26,6 +26,7 @@ brew "tree"
 brew "zplug"
 brew "fzf"
 brew "tree"
+brew "go"
 
 cask "google-cloud-sdk"
 
