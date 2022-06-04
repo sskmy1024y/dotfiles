@@ -34,5 +34,4 @@ cask "google-cloud-sdk"
 cask "docker"
 
 # font
-cask "font-hack-nerd-font"
-
+cask "font-meslo-lg-nerd-font"
