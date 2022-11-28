@@ -3,6 +3,7 @@
   preloadindex = true
   fscache = true
 
+	autocrlf = input
 [merge]
 	tool = vscode
 
@@ -28,7 +29,7 @@
 	default = current
 
 [alias]
-  # Check git alias 
+  # Check git alias
   alias = !git config --get-regexp '^alias\\.' | sed 's/alias\\.\\([^ ]*\\) \\(.*\\)/\\1\\\t => \\2/' | sort
 
   # add
@@ -39,31 +40,34 @@
   ca = commit -am                   # commit all with message
   ci = commit                       # commit
   amend = commit --amend            # ammend your last commit
- 
+
   # checkout
   ch = checkout                     # checkout
+
+  # checkout history
+  history = !git --no-pager reflog | awk '$3 == \"checkout:\" && /moving from/ {print $8}' | uniq | head
 
   # diff
   d = diff                          # diff unstaged changes
   dc = diff --cached                # diff staged changes
   last = diff HEAD^                 # diff last committed change
-  
+
   # log
   l = log --graph --date=short
   tree = log --graph --branches --pretty=format:'%C(cyan)[%h]%Creset -%C(cyan bold)%d%Creset %s (%cr) %C(blue)<%an>%Creset'
- 
+
   # pull
   pl = pull
   drag = pull --rebase              # Pull using rebase mode (Not merge!!!)
 
   # push
   ps = push                         # push
- 
+
   # status
   s = status                        # status
   st = status                       # status
   stat = status                     # status
-  
+
 [filter "lfs"]
 	required = true
 	clean = git-lfs clean -- %f
