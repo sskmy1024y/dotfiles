@@ -41,11 +41,13 @@
   ci = commit                       # commit
   amend = commit --amend            # ammend your last commit
 
-  # checkout
-  ch = checkout                     # checkout
+  # checkout with fzf
+  ch = !git branch -a | fzf | xargs git checkout
+  chf = ch
 
-  # checkout history
-  history = !git --no-pager reflog | awk '$3 == \"checkout:\" && /moving from/ {print $8}' | uniq | head
+  # checkout with fzf from history
+  history = !git --no-pager reflog | awk '$3 == \"checkout:\" && /moving from/ {print $8}' | head -20 | uniq | fzf | xargs git checkout
+  h = history
 
   # diff
   d = diff                          # diff unstaged changes
