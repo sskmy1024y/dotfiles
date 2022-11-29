@@ -41,9 +41,9 @@
   ci = commit                       # commit
   amend = commit --amend            # ammend your last commit
 
-  # checkout with fzf
-  ch = !git branch -a | fzf | xargs git checkout
-  chf = ch
+  # checkout
+  ch = checkout
+  chf = !git branch -a | fzf | xargs git checkout # checkout with fzf
 
   # checkout with fzf from history
   history = !git --no-pager reflog | awk '$3 == \"checkout:\" && /moving from/ {print $8}' | head -20 | uniq | fzf | xargs git checkout
@@ -63,6 +63,7 @@
   drag = pull --rebase              # Pull using rebase mode (Not merge!!!)
 
   # push
+  push = push -u
   ps = push                         # push
 
   # status
