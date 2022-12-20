@@ -28,6 +28,9 @@
 [push]
 	default = current
 
+[rebase]
+	autostash = true
+
 [alias]
   # Check git alias
   alias = !git config --get-regexp '^alias\\.' | sed 's/alias\\.\\([^ ]*\\) \\(.*\\)/\\1\\\t => \\2/' | sort
