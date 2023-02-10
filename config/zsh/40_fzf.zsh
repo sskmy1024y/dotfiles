@@ -91,7 +91,17 @@ function codeworktree() {
     code ${selectedWorkTreeDir}
 }
 
+# gcloud config configurationsの一覧から選択してactivateする
+function gcloud-switch() {
+  local selected=$(
+    gcloud config configurations list --format='table[](is_active.yesno(yes="[x]",no="[_]"), name, properties.core.account, properties.core.project.yesno(no="(unset)"))' \
+      | fzf --select-1 --header-lines=1 --query="$1" \
+      | awk '{print $2}'
+  )
+  if [ -n "$selected" ]; then
+    gcloud config configurations activate $selected
+  fi
+}
+
 export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
 export FZF_DEFAULT_OPTS='--height 40% --reverse --border'
-
-
