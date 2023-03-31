@@ -33,3 +33,7 @@ fi
 if "$(is_arm_darwin)" ; then
   eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
+
+if is_exists "github-copilot-cli"; then
+  eval "$(github-copilot-cli alias -- "$0")"
+fi
