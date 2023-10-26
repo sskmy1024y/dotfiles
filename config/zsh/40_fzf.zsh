@@ -103,5 +103,20 @@ function gcloud-switch() {
   fi
 }
 
+function tmuxa() {
+  local selected=$(
+    tmux list-sessions -F "#{session_name}" \
+      | fzf --select-1 --header-lines=1 --query="$1" \
+      | awk '{print $2}'
+  )
+  if [ -n "$selected" ]; then
+    if [ -n "$TMUX" ]; then
+      tmux switch-client -t $selected
+    else
+      tmux attach -t $selected
+    fi
+  fi
+}
+
 export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
 export FZF_DEFAULT_OPTS='--height 40% --reverse --border'

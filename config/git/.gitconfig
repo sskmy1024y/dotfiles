@@ -20,7 +20,7 @@
 	email = sskmy1024.y@gmail.com
 
 [init]
-	defaultBranch = master
+	defaultBranch = main
 
 [commit]
 	template = ~/.gitmessage
@@ -74,6 +74,7 @@
   st = status                       # status
   stat = status                     # status
 
+	ac = !git add -A && aicommits -a
 [filter "lfs"]
 	required = true
 	clean = git-lfs clean -- %f
