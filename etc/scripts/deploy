@@ -39,13 +39,13 @@ if [ ! -d "$HOME/.ssh" ]; then
 fi
 if [ ! -f "$HOME/.ssh/authorized_keys" ]; then
   touch "$HOME"/.ssh/authorized_keys
-  chmod 600 "$HOME"/.ssh/authorized_keys  
+  chmod 600 "$HOME"/.ssh/authorized_keys
 fi
 symlink "$CONFPATH/ssh/config" "$HOME/.ssh/config"
 symlink "$CONFPATH/ssh/git.conf" "$HOME/.ssh/git.conf"
 if [ ! -f "$HOME/.ssh/git_private" ]; then
   ssh-keygen -q -f "$HOME"/.ssh/git_private
-  mv "$HOME"/.ssh/git_private "$HOME"/.ssh/git_public
+  mv "$HOME"/.ssh/git_private.pub "$HOME"/.ssh/git_public
 fi
 
 # git

@@ -28,12 +28,13 @@ install_anyenv() {
     if [ -z "${HOME}/.anyenv" ]; then
       git clone https://github.com/anyenv/anyenv.git "$HOME"/.anyenv
     fi
-    exec $SHELL -l
 
     # plugins
     mkdir -p "$HOME"/.anyenv/plugins
     git clone https://github.com/znz/anyenv-update.git "$HOME"/.anyenv/plugins/anyenv-update
     git clone https://github.com/znz/anyenv-git.git "$HOME"/.anyenv/plugins/anyenv-git
+
+    source ~/.zshrc
   fi
 
   # check exist local bashrc
@@ -60,7 +61,7 @@ EOF
     # shellcheck disable=SC1091
     exec $SHELL -l
   fi
-  
+
   "$HOME"/.anyenv/bin/anyenv init
   # exec $SHELL -l
   exec $SHELL -l
