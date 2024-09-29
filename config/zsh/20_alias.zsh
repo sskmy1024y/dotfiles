@@ -2,7 +2,6 @@
 # * エイリアスなど
 ## =============================
 alias ll='ls -l'
-alias gitdir='cd ~/sho/Develop/;clear'
 alias la='ls -la'
 
 # anyenv

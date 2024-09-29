@@ -1,1 +1,11 @@
 Include ~/.ssh/*.conf
+
+# --- START CODER VSCODE ---
+Host coder-vscode--*
+  ConnectTimeout 0
+  LogLevel ERROR
+  ProxyCommand "/Users/sho/Library/Application Support/Code/User/globalStorage/coder.coder-remote/bin/coder-darwin-arm64" vscodessh --network-info-dir "/Users/sho/Library/Application Support/Code/User/globalStorage/coder.coder-remote/net" --log-dir "/Users/sho/Library/Application Support/Code/User/globalStorage/coder.coder-remote/log" --session-token-file "/Users/sho/Library/Application Support/Code/User/globalStorage/coder.coder-remote/session_token" --url-file "/Users/sho/Library/Application Support/Code/User/globalStorage/coder.coder-remote/url" %h
+  SetEnv  CODER_SSH_SESSION_TYPE=vscode
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+# --- END CODER VSCODE ---
