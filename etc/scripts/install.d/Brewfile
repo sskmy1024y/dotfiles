@@ -32,7 +32,6 @@ cask "google-cloud-sdk"
 
 # cask apps
 cask "docker"
-cask "1password/tap/1password-cli"
 
 # font
 cask "font-meslo-lg-nerd-font"

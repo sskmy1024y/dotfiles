@@ -66,6 +66,10 @@ symlink "$CONFPATH/tmux/.tmux.conf" "$HOME/.tmux.conf"
 # shellcheck disable=SC2016
 echo '  export PATH="$HOME/.tmux/bin:$PATH"'
 
+# Claude
+symlink "$CONFPATH/claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+symlink "$CONFPATH/claude/settings.json" "$HOME/.claude/settings.json"
+
 # local binary
 info "binary..."
 # shellcheck disable=SC2016

@@ -106,8 +106,7 @@ function gcloud-switch() {
 function tmuxa() {
   local selected=$(
     tmux list-sessions -F "#{session_name}" \
-      | fzf --select-1 --header-lines=1 --query="$1" \
-      | awk '{print $2}'
+      | fzf --select-1 --query="$1"
   )
   if [ -n "$selected" ]; then
     if [ -n "$TMUX" ]; then
