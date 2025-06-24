@@ -7,7 +7,7 @@
       "Bash(yarn *)",
       "Bash(mkdir:*)",
       "Read(~/.zshrc)",
-      "Bash(osascript -e *)"
+      "Bash(osascript:*)"
     ]
   },
   "env": {}
