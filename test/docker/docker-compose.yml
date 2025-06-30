@@ -1,0 +1,53 @@
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.${OS:-ubuntu}
+    image: dotfiles-test:${OS:-ubuntu}
+    container_name: dotfiles-test-${OS:-ubuntu}-${INSTALL_METHOD:-remote}
+    environment:
+      - INSTALL_METHOD=${INSTALL_METHOD:-remote}
+      - RUN_CLEANUP=${RUN_CLEANUP:-false}
+      - TERM=xterm-256color
+    # volumes:
+    #   - ./test_install.sh:/home/testuser/test_install.sh:ro
+    command: /home/testuser/test_install.sh ${INSTALL_METHOD:-remote} ${RUN_CLEANUP:+cleanup}
+
+  # Convenience services for specific test scenarios
+  ubuntu-remote:
+    extends: test
+    environment:
+      - OS=ubuntu
+      - INSTALL_METHOD=remote
+    
+  ubuntu-local:
+    extends: test
+    environment:
+      - OS=ubuntu
+      - INSTALL_METHOD=local
+    
+  archlinux-remote:
+    extends: test
+    environment:
+      - OS=archlinux
+      - INSTALL_METHOD=remote
+    
+  archlinux-local:
+    extends: test
+    environment:
+      - OS=archlinux
+      - INSTALL_METHOD=local
+
+  # Interactive shell for debugging
+  shell:
+    build:
+      context: .
+      dockerfile: Dockerfile.${OS:-ubuntu}
+    image: dotfiles-test:${OS:-ubuntu}
+    container_name: dotfiles-test-shell-${OS:-ubuntu}
+    volumes:
+      # Mount the entire dotfiles repo for debugging
+      - ../../:/home/testuser/dotfiles-repo:ro
+    command: /bin/bash
+    stdin_open: true
+    tty: true

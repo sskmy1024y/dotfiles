@@ -37,6 +37,22 @@ clean: ## Remove dotfiles and this repo
 	@-$(foreach val, $(DOTFILES), rm -vrf $(HOME)/$(val);)
 	-rm -rf $(DOTPATH)
 
+test: ## Run test suite
+	@echo '==> Running test suite'
+	@bash $(DOTPATH)/test/run_tests.sh
+
+test-docker: ## Run Docker-based tests
+	@echo '==> Running Docker tests'
+	@cd $(DOTPATH)/test/docker && $(MAKE) test-all
+
+test-docker-ubuntu: ## Run Docker tests for Ubuntu
+	@echo '==> Running Docker tests for Ubuntu'
+	@cd $(DOTPATH)/test/docker && $(MAKE) test-ubuntu
+
+test-docker-archlinux: ## Run Docker tests for Arch Linux
+	@echo '==> Running Docker tests for Arch Linux'
+	@cd $(DOTPATH)/test/docker && $(MAKE) test-archlinux
+
 help: ## Self-documented Makefile
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort \
