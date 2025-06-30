@@ -69,6 +69,7 @@ echo '  export PATH="$HOME/.tmux/bin:$PATH"'
 # Claude
 symlink "$CONFPATH/claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
 symlink "$CONFPATH/claude/settings.json" "$HOME/.claude/settings.json"
+symlink "$CONFPATH/claude/commands" "$HOME/.claude/commands"
 
 # local binary
 info "binary..."

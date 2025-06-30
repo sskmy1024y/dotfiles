@@ -83,3 +83,5 @@
   process = git-lfs filter-process
 [url "https://github.com/"]
 	insteadOf = git://github.com/
+[http]
+	postBuffer = 524288000

@@ -4,7 +4,13 @@
 alias ll='ls -l'
 alias la='ls -la'
 
-# anyenv
+## =============================
+# * anyenv, nodenv, pyenvの設定
+## =============================
+
+# pyenvで余計なアプリがインストールされないように設定
+export PYTHON_CONFIGURE_OPTS="--enable-framework=no --disable-tk"
+
 if is_exists "anyenv"; then
    if ! [ -f /tmp/anyenv.cache ]; then
       anyenv init - --no-rehash > /tmp/anyenv.cache

@@ -14,6 +14,7 @@ else
 fi
 export PATH=$HOME/.rbenv/bin:$PATH
 export PATH=$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH
+export PATH=$HOME/.pyenv/bin:$PATH
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/Users/sho_yamashita/sho/Github/google-cloud-sdk/path.zsh.inc' ]; then
