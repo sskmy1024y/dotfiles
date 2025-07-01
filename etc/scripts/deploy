@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Author: sskmy1024y
-# Last Modified: 29 Aug 2021.
+# Last Modified: 02 Jul 2025.
 
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
@@ -15,28 +15,44 @@ CONFPATH=$DOTPATH/config
 # load lib script (functions)
 . "$DOTPATH"/etc/lib/header.sh
 
+# Helper function to ensure directory exists
+ensure_dir() {
+  local dir="$1"
+  local mode="${2:-}"
+  if [ ! -d "$dir" ]; then
+    mkdir -p "$dir" || {
+      error "Failed to create directory: $dir"
+      return 1
+    }
+    if [ -n "$mode" ]; then
+      chmod "$mode" "$dir" || {
+        error "Failed to set permissions on: $dir"
+        return 1
+      }
+    fi
+  fi
+}
+
+# Deploy function for consistent handling
+deploy_config() {
+  local name="$1"
+  info "${name}..."
+}
+
 ## create symbolic link
-echo ""
 info "Creating symbolic links..."
-if [ ! -d "$HOME/.local/bin" ]; then
-  mkdir -p "$HOME"/.local/bin
-fi
+ensure_dir "$HOME/.local/bin"
 symlink "$DOTPATH/etc/scripts/deploy" "$HOME/.local/bin/deploy"
 
 # zsh
-info "zsh..."
+deploy_config "zsh"
 symlink "$CONFPATH/zsh/.zshrc" "$HOME/.zshrc"
-if [ ! -d "$HOME/.zsh" ]; then
-  mkdir -p "$HOME"/.zsh
-fi
+ensure_dir "$HOME/.zsh"
 wild_symlink "$CONFPATH/zsh/*.zsh" "$HOME/.zsh/"
 
 # ssh
-info "ssh .."
-if [ ! -d "$HOME/.ssh" ]; then
-  mkdir -p "$HOME/.ssh"
-  chmod 700 "$HOME"/.ssh
-fi
+deploy_config "ssh"
+ensure_dir "$HOME/.ssh" "700"
 if [ ! -f "$HOME/.ssh/authorized_keys" ]; then
   touch "$HOME"/.ssh/authorized_keys
   chmod 600 "$HOME"/.ssh/authorized_keys
@@ -44,40 +60,44 @@ fi
 symlink "$CONFPATH/ssh/config" "$HOME/.ssh/config"
 symlink "$CONFPATH/ssh/git.conf" "$HOME/.ssh/git.conf"
 if [ ! -f "$HOME/.ssh/git_private" ]; then
-  ssh-keygen -q -f "$HOME"/.ssh/git_private
+  # Use empty passphrase for CI/test environments
+  passphrase=""
+  [ -z "${CI:-}" ] && [ -z "${DOTFILES_TEST:-}" ] && passphrase="-"
+  
+  ssh-keygen -q -f "$HOME"/.ssh/git_private -N "$passphrase"
   mv "$HOME"/.ssh/git_private.pub "$HOME"/.ssh/git_public
 fi
 
 # git
-info "git..."
+deploy_config "git"
 symlink "$CONFPATH/git/.gitconfig" "$HOME/.gitconfig"
 symlink "$CONFPATH/git/.gitignore.global" "$HOME/.gitignore.global"
 symlink "$CONFPATH/git/.gitmessage" "$HOME/.gitmessage"
 symlink "$CONFPATH/git/.czrc" "$HOME/.czrc"
-mkdir -p "$HOME"/.git_template/hooks
+ensure_dir "$HOME/.git_template/hooks"
 
 # tmux
-info "tmux..."
+deploy_config "tmux"
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   git clone https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
 fi
 symlink "$CONFPATH/tmux/.tmux.conf" "$HOME/.tmux.conf"
-# echo "  please check --> doc/tmux.md"
 # shellcheck disable=SC2016
-echo '  export PATH="$HOME/.tmux/bin:$PATH"'
+log 'Add to your shell: export PATH="$HOME/.tmux/bin:$PATH"'
 
 # Claude
+deploy_config "claude"
+ensure_dir "$HOME/.claude"
 symlink "$CONFPATH/claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
 symlink "$CONFPATH/claude/settings.json" "$HOME/.claude/settings.json"
 symlink "$CONFPATH/claude/commands" "$HOME/.claude/commands"
 
 # local binary
-info "binary..."
+deploy_config "binary"
 # shellcheck disable=SC2016
-echo '  export PATH="$HOME/.local/bin:$PATH'
+log 'Add to your shell: export PATH="$HOME/.local/bin:$PATH"'
 # shellcheck disable=SC2016
-echo '  export PATH="/opt/local/bin:/opt/local/sbin:$PATH"'
+log 'Add to your shell: export PATH="/opt/local/bin:/opt/local/sbin:$PATH"'
 for i in "$DOTPATH"/bin/*; do
   ln -sf "$i" "$HOME"/.local/bin/
 done
-echo ""

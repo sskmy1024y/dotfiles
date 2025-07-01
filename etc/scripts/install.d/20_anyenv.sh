@@ -25,7 +25,7 @@ install_anyenv() {
     info "anyenv is already installed"
   else
     warn "anyenv has not installed yet"
-    if [ -z "${HOME}/.anyenv" ]; then
+    if [ ! -d "$HOME/.anyenv" ]; then
       git clone https://github.com/anyenv/anyenv.git "$HOME"/.anyenv
     fi
 
@@ -52,19 +52,20 @@ install_anyenv() {
 if [ -d "$HOME"/.anyenv ] ; then
     export PATH="$HOME/.anyenv/bin:$PATH"
     # tmux
-    for D in $(ls "$HOME"/.anyenv/envs); do
+    for D in "$HOME"/.anyenv/envs/*/; do
+      D=$(basename "$D")
       export PATH="$HOME/.anyenv/envs/${D}/shims:$PATH"
     done
 fi
 
 EOF
-    # shellcheck disable=SC1091
-    exec $SHELL -l
+    # Note: exec will replace the current shell and stop script execution
+    # exec $SHELL -l
   fi
 
   "$HOME"/.anyenv/bin/anyenv init
+  # Note: exec will replace the current shell and stop script execution
   # exec $SHELL -l
-  exec $SHELL -l
   anyenv install --init
 
   for l in goenv pyenv jenv rbenv nodenv; do

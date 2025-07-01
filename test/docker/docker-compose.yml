@@ -3,14 +3,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.${OS:-ubuntu}
+    platform: linux/amd64
     image: dotfiles-test:${OS:-ubuntu}
     container_name: dotfiles-test-${OS:-ubuntu}-${INSTALL_METHOD:-remote}
     environment:
       - INSTALL_METHOD=${INSTALL_METHOD:-remote}
       - RUN_CLEANUP=${RUN_CLEANUP:-false}
       - TERM=xterm-256color
-    # volumes:
-    #   - ./test_install.sh:/home/testuser/test_install.sh:ro
+      - SKIP_BATS_TESTS=${SKIP_BATS_TESTS:-}
+      - DOTFILES_TEST=1
     command: /home/testuser/test_install.sh ${INSTALL_METHOD:-remote} ${RUN_CLEANUP:+cleanup}
 
   # Convenience services for specific test scenarios
@@ -25,6 +26,10 @@ services:
     environment:
       - OS=ubuntu
       - INSTALL_METHOD=local
+    volumes:
+      # Mount the entire dotfiles repo for local testing
+      - ../../:/home/testuser/dotfiles-local:ro
+    command: /home/testuser/test_install.sh local
     
   archlinux-remote:
     extends: test
@@ -37,12 +42,57 @@ services:
     environment:
       - OS=archlinux
       - INSTALL_METHOD=local
+    volumes:
+      # Mount the entire dotfiles repo for local testing
+      - ../../:/home/testuser/dotfiles-local:ro
+    command: /home/testuser/test_install.sh local
+
+  # Unified Bats test service
+  bats:
+    extends: test
+    environment:
+      - OS=${OS:-ubuntu}
+      - INSTALL_METHOD=local
+      - SKIP_BATS_TESTS=false
+      - TERM=xterm-256color
+      - DOTFILES_TEST=1
+      - CI=${CI:-false}
+      - TEST_FILE=${TEST_FILE:-}
+      - TEST_ARGS=${TEST_ARGS:-}
+    volumes:
+      # Mount the entire dotfiles repo for local testing
+      - ../../:/home/testuser/dotfiles-local:ro
+    command: 
+      - bash
+      - -c
+      - |
+        cp -r /home/testuser/dotfiles-local /home/testuser/.dotfiles && 
+        cd /home/testuser/.dotfiles && 
+        if [ -n "$${TEST_FILE}" ]; then
+          test/run_tests.sh "$${TEST_FILE}"
+        elif [ "$${CI}" = "true" ]; then
+          test/run_tests.sh --ci
+        else
+          test/run_tests.sh $${TEST_ARGS}
+        fi
+
+  # Aliases for backward compatibility
+  ubuntu-bats:
+    extends: bats
+    environment:
+      - OS=ubuntu
+
+  archlinux-bats:
+    extends: bats
+    environment:
+      - OS=archlinux
 
   # Interactive shell for debugging
   shell:
     build:
       context: .
       dockerfile: Dockerfile.${OS:-ubuntu}
+    platform: linux/amd64
     image: dotfiles-test:${OS:-ubuntu}
     container_name: dotfiles-test-shell-${OS:-ubuntu}
     volumes:

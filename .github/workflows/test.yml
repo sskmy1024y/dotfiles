@@ -45,7 +45,7 @@ jobs:
           
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.os }}
           path: test-results.tap
@@ -88,15 +88,39 @@ jobs:
       - name: Test deployment
         run: |
           export DOTPATH=$PWD
-          bash etc/scripts/deploy
+          echo "Running deploy script..."
+          echo "DOTPATH: $DOTPATH"
+          echo "HOME: $HOME"
+          
+          # Move existing files that would conflict
+          for file in .gitconfig .zshrc .bashrc; do
+            if [ -f "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
+              echo "Moving existing $file to $file.backup"
+              mv "$HOME/$file" "$HOME/$file.backup"
+            fi
+          done
+          
+          bash -x etc/scripts/deploy || { echo "Deploy script failed with exit code $?"; exit 1; }
           
       - name: Verify installation
         run: |
+          # Debug: Show what was created
+          echo "Contents of HOME directory:"
+          ls -la "$HOME" || true
+          echo "Contents of .local (if exists):"
+          ls -la "$HOME/.local" || true
+          echo "Contents of .local/bin (if exists):"
+          ls -la "$HOME/.local/bin" || true
+          
           # Check if key files were linked
-          test -L "$HOME/.zshrc"
-          test -L "$HOME/.gitconfig"
-          test -d "$HOME/.zsh"
-          test -d "$HOME/.local/bin"
+          echo "Checking .zshrc..."
+          test -L "$HOME/.zshrc" || { echo ".zshrc not found or not a symlink"; exit 1; }
+          echo "Checking .gitconfig..."
+          test -L "$HOME/.gitconfig" || { echo ".gitconfig not found or not a symlink"; exit 1; }
+          echo "Checking .zsh directory..."
+          test -d "$HOME/.zsh" || { echo ".zsh directory not found"; exit 1; }
+          echo "Checking .local/bin directory..."
+          test -d "$HOME/.local/bin" || { echo ".local/bin directory not found"; exit 1; }
           
       - name: Install Bats
         run: |
@@ -105,8 +129,8 @@ jobs:
           
       - name: Run integration tests with Bats
         run: |
-          ./test/bats test/test_symlink.bats
-          ./test/bats test/test_deploy.bats
+          ./test/bats-runner test/test_symlink.bats
+          ./test/bats-runner test/test_deploy.bats
           
       - name: Test Makefile targets
         run: |
@@ -168,7 +192,7 @@ jobs:
         run: |
           chmod +x test/install_bats.sh
           ./test/install_bats.sh
-          ./test/bats test/test_syntax.bats
+          ./test/bats-runner test/test_syntax.bats
 
   all-tests-summary:
     name: All Tests Summary

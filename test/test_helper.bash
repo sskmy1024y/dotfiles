@@ -4,7 +4,19 @@
 
 # Get directories
 export TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export DOTPATH="$(cd "$TEST_DIR/.." && pwd)"
+
+# Set DOTPATH - handle both local and Docker environments
+if [ -d "$TEST_DIR/.." ] && [ -f "$TEST_DIR/../Makefile" ]; then
+    export DOTPATH="$(cd "$TEST_DIR/.." && pwd)"
+elif [ -d "${HOME}/.dotfiles" ]; then
+    # Docker environment or home directory installation
+    export DOTPATH="${HOME}/.dotfiles"
+    export TEST_DIR="$DOTPATH/test"
+else
+    echo "Warning: Could not determine DOTPATH" >&2
+    export DOTPATH="${DOTPATH:-}"
+fi
+
 export BATS_LIBS_DIR="$TEST_DIR/bats"
 
 # Load bats libraries

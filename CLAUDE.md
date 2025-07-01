@@ -65,3 +65,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. Run `make deploy` to create symbolic links
 3. Run `make init` to install packages via numbered scripts in `install.d/`
 4. Optional: Run `make deep` for advanced tools and fonts
+
+## Testing Requirements
+
+### After Making Changes
+- **Always run tests after modifying files**: Execute both `make bats` and `make test-docker` to ensure changes don't break existing functionality
+- `make test-bats` - Runs Bats test suite for shell scripts
+- `make test-docker` - Tests deployment in Docker containers for different Linux distributions

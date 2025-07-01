@@ -125,10 +125,10 @@ run_all_tests() {
         
         if run_bats_test "$name" "$test_file"; then
             suite_results+=("${GREEN}✓${NC} $name")
-            ((total_passed++))
+            ((total_passed++)) || true
         else
             suite_results+=("${RED}✗${NC} $name")
-            ((total_failed++))
+            ((total_failed++)) || true
         fi
         
         echo ""

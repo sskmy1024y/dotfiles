@@ -5,6 +5,8 @@ DOTFILES   := $(filter-out $(EXCLUSIONS), $(CANDIDATES))
 
 .DEFAULT_GOAL := help
 
+.PHONY: test
+
 all:
 
 update: ## Fetch changes for this repo
@@ -41,6 +43,10 @@ test: ## Run test suite
 	@echo '==> Running test suite'
 	@bash $(DOTPATH)/test/run_tests.sh
 
+test-rebuild: ## Rebuild Docker images and run tests
+	@echo '==> Rebuilding Docker images and running tests'
+	@cd $(DOTPATH)/test/docker && $(MAKE) build-clean
+
 test-docker: ## Run Docker-based tests
 	@echo '==> Running Docker tests'
 	@cd $(DOTPATH)/test/docker && $(MAKE) test-all
@@ -52,6 +58,26 @@ test-docker-ubuntu: ## Run Docker tests for Ubuntu
 test-docker-archlinux: ## Run Docker tests for Arch Linux
 	@echo '==> Running Docker tests for Arch Linux'
 	@cd $(DOTPATH)/test/docker && $(MAKE) test-archlinux
+
+test-bats: ## Run Bats tests in Docker (both Ubuntu and Arch Linux)
+	@echo '==> Running Bats tests in Docker'
+	@cd $(DOTPATH)/test/docker && $(MAKE) bats
+
+test-bats-ubuntu: ## Run Bats tests in Docker (Ubuntu only)
+	@echo '==> Running Bats tests in Ubuntu Docker'
+	@cd $(DOTPATH)/test/docker && $(MAKE) bats-ubuntu
+
+test-bats-archlinux: ## Run Bats tests in Docker (Arch Linux only)
+	@echo '==> Running Bats tests in Arch Linux Docker'
+	@cd $(DOTPATH)/test/docker && $(MAKE) bats-archlinux
+
+test-bats-ci: ## Run Bats tests in Docker CI mode (both OS)
+	@echo '==> Running Bats tests in Docker (CI mode)'
+	@cd $(DOTPATH)/test/docker && $(MAKE) bats-ci
+
+test-mac-local: ## Run tests in macOS Docker container
+	@echo '==> Running tests in macOS Docker container'
+	@cd $(DOTPATH)/test/docker && $(MAKE) test-mac-local
 
 help: ## Self-documented Makefile
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \

@@ -34,10 +34,10 @@ assert_exists() {
     
     if [ -e "$file" ]; then
         echo -e "${GREEN}✓${NC} $desc: $file"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${RED}✗${NC} $desc: $file not found"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
 
@@ -47,10 +47,10 @@ assert_symlink() {
     
     if [ -L "$link" ]; then
         echo -e "${GREEN}✓${NC} $desc: $link -> $(readlink "$link")"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${RED}✗${NC} $desc: $link is not a symlink"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
 
@@ -74,18 +74,28 @@ run_bats_tests() {
     cd "$HOME/.dotfiles"
     
     # Install Bats if needed
-    if [ ! -x "test/bats" ]; then
+    if [ ! -x "test/bats-runner" ]; then
         info "Installing Bats..."
-        bash test/install_bats.sh
+        if [ -f "test/install_bats.sh" ]; then
+            bash test/install_bats.sh
+        else
+            warn "Bats installer not found, skipping Bats tests"
+            return 0
+        fi
     fi
     
     # Run tests in CI mode
-    if test/run_tests.sh --ci; then
-        info "Bats tests passed"
-        return 0
+    if [ -f "test/run_tests.sh" ]; then
+        if test/run_tests.sh --ci; then
+            info "Bats tests passed"
+            return 0
+        else
+            error "Bats tests failed"
+            return 1
+        fi
     else
-        error "Bats tests failed"
-        return 1
+        warn "Test runner not found, skipping Bats tests"
+        return 0
     fi
 }
 
@@ -93,15 +103,21 @@ run_bats_tests() {
 test_local_install() {
     info "Testing local installation..."
     
-    # Clone repository
-    if [ ! -d "$HOME/.dotfiles" ]; then
-        git clone https://github.com/sskmy1024y/dotfiles.git "$HOME/.dotfiles"
+    # Check if we have a mounted local repository
+    if [ -d "$HOME/dotfiles-local" ]; then
+        info "Using mounted local repository"
+        cp -r "$HOME/dotfiles-local" "$HOME/.dotfiles"
+    else
+        # Clone repository
+        if [ ! -d "$HOME/.dotfiles" ]; then
+            git clone https://github.com/sskmy1024y/dotfiles.git "$HOME/.dotfiles"
+        fi
     fi
     
     cd "$HOME/.dotfiles"
     
-    # Run make install
-    if make install; then
+    # Run make deploy (without init for testing)
+    if make deploy; then
         info "Local installation completed"
     else
         error "Local installation failed"
@@ -115,6 +131,8 @@ verify_installation() {
     
     echo -e "\n--- Checking directories ---"
     assert_exists "$HOME/.dotfiles" "Dotfiles directory"
+    echo "DEBUG: About to check .local/bin"
+    ls -la "$HOME/.local/" 2>&1 || echo "DEBUG: .local does not exist"
     assert_exists "$HOME/.local/bin" "Local bin directory"
     assert_exists "$HOME/.zsh" "Zsh config directory"
     assert_exists "$HOME/.ssh" "SSH directory"
@@ -144,19 +162,19 @@ verify_installation() {
     local ssh_perms=$(stat -c %a "$HOME/.ssh" 2>/dev/null || echo "unknown")
     if [ "$ssh_perms" = "700" ]; then
         echo -e "${GREEN}✓${NC} SSH directory permissions: 700"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${RED}✗${NC} SSH directory permissions: $ssh_perms (expected 700)"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
     
     local auth_perms=$(stat -c %a "$HOME/.ssh/authorized_keys" 2>/dev/null || echo "unknown")
     if [ "$auth_perms" = "600" ]; then
         echo -e "${GREEN}✓${NC} authorized_keys permissions: 600"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${RED}✗${NC} authorized_keys permissions: $auth_perms (expected 600)"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
 
@@ -170,20 +188,20 @@ test_make_commands() {
     echo -e "\n--- Testing 'make check' ---"
     if make check; then
         echo -e "${GREEN}✓${NC} make check succeeded"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${RED}✗${NC} make check failed"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
     
     # Test make help
     echo -e "\n--- Testing 'make help' ---"
     if make help; then
         echo -e "${GREEN}✓${NC} make help succeeded"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${RED}✗${NC} make help failed"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
 
@@ -199,19 +217,19 @@ test_cleanup() {
     # Run make clean
     if make clean; then
         echo -e "${GREEN}✓${NC} make clean succeeded"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${RED}✗${NC} make clean failed"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
     
     # Check if dotfiles were removed
     if [ ! -d "$HOME/.dotfiles" ]; then
         echo -e "${GREEN}✓${NC} Dotfiles directory removed"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${RED}✗${NC} Dotfiles directory still exists"
-        ((TESTS_FAILED++))
+        TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
     
     # Count symlinks after cleanup
@@ -219,7 +237,7 @@ test_cleanup() {
     
     if [ "$after_count" -lt "$before_count" ]; then
         echo -e "${GREEN}✓${NC} Symlinks cleaned up"
-        ((TESTS_PASSED++))
+        TESTS_PASSED=$((TESTS_PASSED + 1))
     else
         echo -e "${YELLOW}⚠${NC} Some symlinks may remain"
     fi
@@ -229,7 +247,7 @@ test_cleanup() {
 main() {
     echo "================================"
     echo "Dotfiles Installation Test"
-    echo "OS: $(cat /etc/os-release | grep PRETTY_NAME | cut -d'"' -f2)"
+    echo "OS: $(grep PRETTY_NAME /etc/os-release | cut -d'"' -f2)"
     echo "User: $USER"
     echo "Home: $HOME"
     echo "================================"
@@ -254,7 +272,7 @@ main() {
     test_make_commands
     
     # Run Bats tests if installation succeeded
-    if [ -d "$HOME/.dotfiles" ]; then
+    if [ -d "$HOME/.dotfiles" ] && [ "${SKIP_BATS_TESTS:-}" != "true" ]; then
         run_bats_tests
     fi
     

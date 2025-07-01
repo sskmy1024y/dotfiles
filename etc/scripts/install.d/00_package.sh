@@ -26,7 +26,9 @@ ubuntu() {
 
   sudo apt update -q -y
   sudo apt upgrade -y
+  # shellcheck disable=SC2086
   sudo apt install -q -y $PKG_DEFAULT
+  # shellcheck disable=SC2086
   sudo apt install -q -y $PKG_UBUNTU
 }
 
@@ -40,7 +42,9 @@ archlinux() {
   fi
   
   yay -Syu --noconfirm
+  # shellcheck disable=SC2086
   yay -S --needed $PKG_DEFAULT
+  # shellcheck disable=SC2086
   yay -S --needed $PKG_ARCH
 }
 
@@ -64,6 +68,7 @@ darwin() {
     brew tap caskroom/cask
   fi
 
+  # shellcheck disable=SC2086
   brew install $PKG_DEFAULT
   # brew install $PKG_OSX
 }
@@ -72,7 +77,9 @@ android() {
   PKG_ANDROID="ncurses-utils binutils coreutils file grep wget taskwarrior neovim"
 
   pkg update
+  # shellcheck disable=SC2086
   pkg install $PKG_DEFAULT
+  # shellcheck disable=SC2086
   pkg install $PKG_ANDROID
   termux-setup-storage
 }

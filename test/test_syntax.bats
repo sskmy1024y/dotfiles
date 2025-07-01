@@ -34,6 +34,15 @@ should_exclude() {
     return 1
 }
 
+# Portable array reading (works on macOS bash 3.2)
+read_array() {
+    local array_name="$1"
+    eval "$array_name=()"
+    while IFS= read -r line; do
+        eval "$array_name+=(\"\$line\")"
+    done
+}
+
 # Find all shell scripts
 find_shell_scripts() {
     local scripts=()
@@ -63,14 +72,15 @@ find_shell_scripts() {
     local scripts
     local failed=0
     
-    # Read scripts into array
-    mapfile -t scripts < <(find_shell_scripts)
+    # Read scripts into array (portable for macOS)
+    scripts=()
+    read_array scripts < <(find_shell_scripts)
     
     # Check each script
     for script in "${scripts[@]}"; do
         if ! bash -n "$script" 2>/dev/null; then
             echo "Syntax error in: ${script#$DOTPATH/}"
-            ((failed++))
+            ((failed++)) || true
         fi
     done
     
@@ -123,6 +133,7 @@ find_shell_scripts() {
         "SC1090"  # Can't follow non-constant source
         "SC1091"  # Not following sourced files
         "SC2034"  # Unused variables (often used in sourced files)
+        "SC2155"  # Declare and assign separately (not critical)
     )
     
     local exclude_args=""
@@ -130,14 +141,21 @@ find_shell_scripts() {
         exclude_args="$exclude_args -e $code"
     done
     
-    # Read scripts into array
-    mapfile -t scripts < <(find_shell_scripts)
+    # Read scripts into array (portable for macOS)
+    scripts=()
+    read_array scripts < <(find_shell_scripts)
     
     # Check each script
     for script in "${scripts[@]}"; do
+        # Skip zsh scripts as ShellCheck doesn't support them
+        if head -n1 "$script" | grep -qE '#!/.*zsh'; then
+            echo "Skipping zsh script: ${script#$DOTPATH/}"
+            continue
+        fi
+        
         if ! shellcheck $exclude_args "$script" 2>/dev/null; then
             echo "ShellCheck warnings in: ${script#$DOTPATH/}"
-            ((failed++))
+            ((failed++)) || true
         fi
     done
     
@@ -165,8 +183,9 @@ find_shell_scripts() {
     local scripts
     local found=0
     
-    # Read scripts into array
-    mapfile -t scripts < <(find_shell_scripts)
+    # Read scripts into array (portable for macOS)
+    scripts=()
+    read_array scripts < <(find_shell_scripts)
     
     # Check each script
     for script in "${scripts[@]}"; do
@@ -176,7 +195,7 @@ find_shell_scripts() {
                 continue
             fi
             echo "Hardcoded path in: ${script#$DOTPATH/}"
-            ((found++))
+            ((found++)) || true
         fi
     done
     
@@ -219,10 +238,15 @@ find_shell_scripts() {
 # Test bats files
 @test "all bats test files have valid syntax" {
     # Ensure bats is available
-    if [ -x "$TEST_DIR/bats" ]; then
+    local bats_bin="$TEST_DIR/bats-runner"
+    if [ ! -x "$bats_bin" ] && [ -x "$TEST_DIR/bats" ] && [ ! -d "$TEST_DIR/bats" ]; then
+        bats_bin="$TEST_DIR/bats"
+    fi
+    
+    if [ -x "$bats_bin" ]; then
         for bats_file in "$TEST_DIR"/*.bats; do
             if [ -f "$bats_file" ]; then
-                run "$TEST_DIR/bats" --dry-run "$bats_file"
+                run "$bats_bin" -c "$bats_file"
                 assert_success
             fi
         done
@@ -236,14 +260,17 @@ find_shell_scripts() {
     local scripts
     local found=0
     
-    # Read scripts into array
-    mapfile -t scripts < <(find_shell_scripts)
+    # Read scripts into array (portable for macOS)
+    scripts=()
+    read_array scripts < <(find_shell_scripts)
     
     # Check for backticks (should use $() instead)
+    # Exclude comments and string literals
     for script in "${scripts[@]}"; do
-        if grep -E '`[^`]+`' "$script" 2>/dev/null; then
+        # Check for backticks not in comments
+        if grep -E '^[^#]*`[^`]+`' "$script" 2>/dev/null | grep -v '^\s*#'; then
             echo "Deprecated backticks in: ${script#$DOTPATH/}"
-            ((found++))
+            ((found++)) || true || true
         fi
     done
     

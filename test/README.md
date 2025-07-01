@@ -218,20 +218,64 @@ See `.github/workflows/test.yml` for CI configuration.
 
 ## Docker Testing
 
-Run tests in Docker containers:
+### Running Bats Tests in Docker
+
+The test suite includes dedicated Docker support for running Bats tests in an isolated environment:
+
+```bash
+# Quick start - run all Bats tests in Docker
+make test-bats
+
+# Run in CI mode (TAP output)
+make test-bats-ci
+
+# Open interactive shell for debugging
+make test-bats-shell
+```
+
+### Docker Bats Commands
+
+From the `test/docker` directory:
+
+```bash
+# Run all Bats tests
+make bats
+
+# Run specific test file
+make bats-file TEST_FILE=test/test_syntax.bats
+
+# Shortcuts for specific test suites
+make bats-syntax    # Syntax and linting tests
+make bats-header    # Header function tests
+make bats-symlink   # Symlink tests
+make bats-deploy    # Deploy script tests
+
+# Build the Bats Docker image
+make build-bats
+```
+
+### Full Installation Tests
+
+Run complete installation tests in Docker containers:
 
 ```bash
 # Run all Docker tests
 make test-docker
+
+# Run specific OS tests
+make test-docker-ubuntu
+make test-docker-archlinux
 
 # Or manually
 cd test/docker
 docker compose up --build
 
 # Run specific OS/install combination
-docker compose up ubuntu-test
-docker compose up archlinux-test-local
+docker compose up ubuntu-remote
+docker compose up archlinux-local
 ```
+
+See [test/docker/README_BATS.md](docker/README_BATS.md) for detailed Docker Bats testing documentation.
 
 ## Troubleshooting
 

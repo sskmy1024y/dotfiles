@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Author: takuzoo3868
-# Last Modified: 15 Feb 2021.
+# Author: sskmy1024y
+# Last Modified: 02 Jul 2025.
 
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
@@ -16,7 +16,6 @@ fi
 
 
 ## install packages
-echo ""
 info "Development environment building..."
 
 # Ask for the administrator password upfront
@@ -31,6 +30,6 @@ do
     kill -0 "$$" || exit
 done 2>/dev/null &
 
-find "$DOTPATH"/etc/scripts/install.d -name "[0-9][0-9]*.sh" | sort | bash
-
-echo ""
+while IFS= read -r script; do
+    bash "$script"
+done < <(find "$DOTPATH"/etc/scripts/install.d -name "[0-9][0-9]*.sh" | sort)

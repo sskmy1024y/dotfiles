@@ -59,8 +59,21 @@ teardown() {
     export HOME="$TEST_TEMP_DIR/home"
     export DOTPATH="$DOTPATH"
     
+    # Ensure DOTPATH is set correctly
+    echo "DOTPATH is: $DOTPATH" >&3
+    echo "Deploy script exists: $(test -f "$DOTPATH/etc/scripts/deploy" && echo yes || echo no)" >&3
+    echo "Header.sh exists: $(test -f "$DOTPATH/etc/lib/header.sh" && echo yes || echo no)" >&3
+    
     # Run deploy script
     run bash "$DOTPATH/etc/scripts/deploy"
+    
+    # Debug output
+    echo "Deploy script exit code: $status" >&3
+    echo "Deploy script output:" >&3
+    echo "$output" >&3
+    echo "Checking directories in: $HOME" >&3
+    ls -la "$HOME" >&3 || true
+    ls -la "$HOME/.local" >&3 || true
     
     # May fail due to missing dependencies, but directories should be created
     # Check directory creation

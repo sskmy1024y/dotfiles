@@ -1,4 +1,7 @@
-# Dockerfile for testing dotfiles installation on Ubuntu
+# Docker configuration for macOS testing
+# Note: This is a simplified test environment for macOS
+# For actual macOS VM testing, use trycua/lumier directly
+
 FROM ubuntu:latest
 
 # Install prerequisites
@@ -7,10 +10,9 @@ RUN apt-get update && apt-get install -y \
     git \
     sudo \
     make \
-    shellcheck \
-    ncurses-bin \
-    # Additional packages for Bats testing
     bash \
+    zsh \
+    # macOS-like tools
     coreutils \
     findutils \
     grep \
@@ -29,15 +31,15 @@ RUN useradd -m -s /bin/bash testuser && \
 USER testuser
 WORKDIR /home/testuser
 
-# Set environment variables
+# Set environment variables to simulate macOS
 ENV USER=testuser
 ENV HOME=/home/testuser
 ENV TERM=xterm-256color
+ENV OSTYPE=darwin
 
 # Copy test script
-COPY test_install.sh /home/testuser/test_install.sh
-RUN sudo chown testuser:testuser /home/testuser/test_install.sh && \
-    sudo chmod +x /home/testuser/test_install.sh
+COPY --chown=testuser:testuser test_install.sh /home/testuser/test_install.sh
+RUN chmod +x /home/testuser/test_install.sh
 
 # Default command
-CMD ["/bin/bash"]
+CMD ["/home/testuser/test_install.sh", "local"]
