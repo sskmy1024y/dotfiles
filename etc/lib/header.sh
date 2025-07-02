@@ -4,17 +4,19 @@
 # Last Modified: 08 Jun 2021.
 
 # use colors on terminal
-tput=$(which tput)
-if [ -n "$tput" ]; then
-  ncolors=$($tput colors)
+tput=$(which tput 2>/dev/null || true)
+if [ -n "$tput" ] && [ -n "${TERM:-}" ]; then
+  ncolors=$($tput colors 2>/dev/null || echo 0)
+else
+  ncolors=0
 fi
-if [ -t 1 ] && [ -n "$ncolors" ] && [ "$ncolors" -ge 8 ]; then
-  RED="$(tput setaf 1)"
-  GREEN="$(tput setaf 2)"
-  YELLOW="$(tput setaf 3)"
-  BLUE="$(tput setaf 4)"
-  BOLD="$(tput bold)"
-  NORMAL="$(tput sgr0)"
+if [ -t 1 ] && [ -n "$ncolors" ] && [ "$ncolors" -ge 8 ] && [ -n "${TERM:-}" ]; then
+  RED="$(tput setaf 1 2>/dev/null || true)"
+  GREEN="$(tput setaf 2 2>/dev/null || true)"
+  YELLOW="$(tput setaf 3 2>/dev/null || true)"
+  BLUE="$(tput setaf 4 2>/dev/null || true)"
+  BOLD="$(tput bold 2>/dev/null || true)"
+  NORMAL="$(tput sgr0 2>/dev/null || true)"
 else
   RED=""
   GREEN=""
@@ -82,7 +84,18 @@ symlink() {
 
 # create symlink using wildcard
 wild_symlink() {
-  ls $1 | xargs -n1 basename | xargs -I{} ln -sf $(ls $1 | head -n1 | xargs dirname)/{} $2{}
+  local pattern="$1"
+  local target_prefix="$2"
+  
+  # Expand the pattern and create symlinks
+  # shellcheck disable=SC2086  # Intentional word splitting for pattern expansion
+  for file in $pattern; do
+    if [ -f "$file" ]; then
+      local basename
+      basename=$(basename "$file")
+      ln -sf "$file" "${target_prefix}${basename}"
+    fi
+  done
 }
 
 # estimate os  

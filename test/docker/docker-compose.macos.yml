@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  macos-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.macos
+    container_name: macos-test
+    environment:
+      - OSTYPE=darwin
+      - INSTALL_METHOD=local
+      - SKIP_BATS_TESTS=true
+    volumes:
+      - ../..:/home/testuser/dotfiles-local:ro
+    stdin_open: true
+    tty: true
+    command: ["/home/testuser/test_install.sh", "local"]

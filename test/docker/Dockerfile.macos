@@ -1,0 +1,45 @@
+# Docker configuration for macOS testing
+# Note: This is a simplified test environment for macOS
+# For actual macOS VM testing, use trycua/lumier directly
+
+FROM ubuntu:latest
+
+# Install prerequisites
+RUN apt-get update && apt-get install -y \
+    curl \
+    git \
+    sudo \
+    make \
+    bash \
+    zsh \
+    # macOS-like tools
+    coreutils \
+    findutils \
+    grep \
+    sed \
+    file \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create test user with sudo privileges
+RUN useradd -m -s /bin/bash testuser && \
+    echo "testuser:password" | chpasswd && \
+    usermod -aG sudo testuser && \
+    echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Switch to test user
+USER testuser
+WORKDIR /home/testuser
+
+# Set environment variables to simulate macOS
+ENV USER=testuser
+ENV HOME=/home/testuser
+ENV TERM=xterm-256color
+ENV OSTYPE=darwin
+
+# Copy test script
+COPY --chown=testuser:testuser test_install.sh /home/testuser/test_install.sh
+RUN chmod +x /home/testuser/test_install.sh
+
+# Default command
+CMD ["/home/testuser/test_install.sh", "local"]

@@ -64,6 +64,7 @@
   # pull
   pl = pull
   drag = pull --rebase              # Pull using rebase mode (Not merge!!!)
+  pull-force = "!current_branch_name=\"$(git rev-parse --abbrev-ref @)\"; git branch --set-upstream-to=\"origin/${current_branch_name}\" \"${current_branch_name}\"; git pull"
 
   # push
   push = push -u
@@ -82,3 +83,5 @@
   process = git-lfs filter-process
 [url "https://github.com/"]
 	insteadOf = git://github.com/
+[http]
+	postBuffer = 524288000

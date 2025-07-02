@@ -12,7 +12,7 @@ if [ -z "${DOTPATH:-}" ]; then
 fi
 
 # load lib script (functions)
-# shellcheck source="$dotfiles"/etc/lib/header.sh
+# shellcheck source=/dev/null
 # shellcheck disable=SC1091
 . "$DOTPATH"/etc/lib/header.sh
 
@@ -24,7 +24,7 @@ else
   exit 1
 fi
 
-mkdir -p $DOTPATH/tmp && cd $DOTPATH/tmp
+mkdir -p "$DOTPATH/tmp" && cd "$DOTPATH/tmp"
 
 # Download Nerd fonts
 nerd_url="https://github.com/ryanoasis/nerd-fonts.git"
@@ -35,18 +35,26 @@ cica_url=$(curl -s https://api.github.com/repos/miiton/Cica/releases/latest | gr
 curl -L "$cica_url" | tar -xvz -C orig
 
 # Cica fonts repatched mapping
-for font in $(find orig/ -type f -name "*.ttf"); do
-  fontforge -script font-patcher -c $font --out dist
+find orig/ -type f -name "*.ttf" -print0 | while IFS= read -r -d '' font; do
+  fontforge -script font-patcher -c "$font" --out dist
 done
 
 # Rename whitespace to underscore
-find dist -type f -name "*.ttf" | while read org_name; do
-  new_name=$(echo $org_name | sed 's/ /_/g')
+find dist -type f -name "*.ttf" | while IFS= read -r org_name; do
+  new_name="${org_name// /_}"
   mv "$org_name" "$new_name"
 done
 
 # Copy to font directory
-cp -u dist/* $fonts_dir
+# Set fonts_dir based on OS
+case "$(detect_os)" in
+  darwin) fonts_dir="$HOME/Library/Fonts" ;;
+  linux) fonts_dir="$HOME/.local/share/fonts" ;;
+  *) fonts_dir="$HOME/.fonts" ;;
+esac
 
-cd $DOTPATH
+mkdir -p "$fonts_dir"
+cp -u dist/* "$fonts_dir"
+
+cd "$DOTPATH"
 rm -rf tmp

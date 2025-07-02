@@ -5,12 +5,12 @@
 
 # Estimate an Operating system name
 
-OS=`uname -s`
-REV=`uname -r`
-MACH=`uname -m`
+OS=$(uname -s)
+REV=$(uname -r)
+MACH=$(uname -m)
 
 GetVersionFromFile() {
-  VERSION="$(tr "\n" ' ' < cat "$1" | sed s/.*VERSION.*=\ // )"
+  VERSION="$(tr "\n" ' ' < "$1" | sed s/.*VERSION.*=\ // )"
 }
 
 
@@ -19,12 +19,12 @@ if [ "${OS}" = "SunOS" ] ; then
   OS=Solaris
   ARCH=$(uname -p)
   OSSTR="${OS} ${REV}(${ARCH} $(uname -v)"
-  echo ${OSSTR}
+  echo "${OSSTR}"
 
 # IBM
 elif [ "${OS}" = "AIX" ] ; then
   OSSTR="${OS} $(oslevel) ($(oslevel -r)"
-  echo ${OSSTR}
+  echo "${OSSTR}"
 
 # Linux
 elif [ "${OS}" = "Linux" ] ; then
@@ -81,20 +81,19 @@ elif [ "${OS}" = "Linux" ] ; then
     DIST="${DIST}[$(tr "\n" ' ' < /etc/UnitedLinux-release | sed s/VERSION.*//)]"
   fi
   OSSTR="${OS} ${DIST} ${REV}(${PSUEDONAME} ${KERNEL} ${MACH})"
-  echo ${OSSTR}
+  echo "${OSSTR}"
 
 # OSX
 elif [ "${OS}" == "Darwin" ]; then
-  type -p sw_vers &>/dev/null
-  [ $? -eq 0 ] && {
-    OS=`sw_vers | grep 'ProductName' | cut -f 2`
-    VER=`sw_vers | grep 'ProductVersion' | cut -f 2`
-    BUILD=`sw_vers | grep 'BuildVersion' | cut -f 2`
+  if type -p sw_vers &>/dev/null; then
+    OS=$(sw_vers | grep 'ProductName' | cut -f 2)
+    VER=$(sw_vers | grep 'ProductVersion' | cut -f 2)
+    BUILD=$(sw_vers | grep 'BuildVersion' | cut -f 2)
     OSSTR="Darwin ${OS} ${VER} ${BUILD} ${MACH}"
-  } || {
+  else
     OSSTR="MacOSX"
-  }
-  echo ${OSSTR}
+  fi
+  echo "${OSSTR}"
 
 else
   # F0ck wind0ws. G0 t0 he11!

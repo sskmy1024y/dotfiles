@@ -1,0 +1,214 @@
+name: Test Dotfiles Installation
+
+on:
+  push:
+    branches: [ master, main, develop, 'feat/*' ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  bats-tests:
+    name: Bats Tests - ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Install ShellCheck (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          
+      - name: Install ShellCheck (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install shellcheck
+          
+      - name: Install Bats
+        run: |
+          chmod +x test/install_bats.sh
+          ./test/install_bats.sh
+          
+      - name: Run all Bats tests
+        run: |
+          chmod +x test/run_tests.sh
+          ./test/run_tests.sh
+          
+      - name: Run tests in CI mode
+        run: |
+          ./test/run_tests.sh --ci > test-results.tap
+          
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: test-results.tap
+
+  individual-bats-tests:
+    name: Individual Bats Test - ${{ matrix.test }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test: [header, symlink, deploy, syntax]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          
+      - name: Install Bats
+        run: |
+          chmod +x test/install_bats.sh
+          ./test/install_bats.sh
+          
+      - name: Run ${{ matrix.test }} tests
+        run: |
+          chmod +x test/run_tests.sh
+          ./test/run_tests.sh ${{ matrix.test }}
+
+  integration-test:
+    name: Integration Test - ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Test deployment
+        run: |
+          export DOTPATH=$PWD
+          echo "Running deploy script..."
+          echo "DOTPATH: $DOTPATH"
+          echo "HOME: $HOME"
+          
+          # Move existing files that would conflict
+          for file in .gitconfig .zshrc .bashrc; do
+            if [ -f "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
+              echo "Moving existing $file to $file.backup"
+              mv "$HOME/$file" "$HOME/$file.backup"
+            fi
+          done
+          
+          bash -x etc/scripts/deploy || { echo "Deploy script failed with exit code $?"; exit 1; }
+          
+      - name: Verify installation
+        run: |
+          # Debug: Show what was created
+          echo "Contents of HOME directory:"
+          ls -la "$HOME" || true
+          echo "Contents of .local (if exists):"
+          ls -la "$HOME/.local" || true
+          echo "Contents of .local/bin (if exists):"
+          ls -la "$HOME/.local/bin" || true
+          
+          # Check if key files were linked
+          echo "Checking .zshrc..."
+          test -L "$HOME/.zshrc" || { echo ".zshrc not found or not a symlink"; exit 1; }
+          echo "Checking .gitconfig..."
+          test -L "$HOME/.gitconfig" || { echo ".gitconfig not found or not a symlink"; exit 1; }
+          echo "Checking .zsh directory..."
+          test -d "$HOME/.zsh" || { echo ".zsh directory not found"; exit 1; }
+          echo "Checking .local/bin directory..."
+          test -d "$HOME/.local/bin" || { echo ".local/bin directory not found"; exit 1; }
+          
+      - name: Install Bats
+        run: |
+          chmod +x test/install_bats.sh
+          ./test/install_bats.sh
+          
+      - name: Run integration tests with Bats
+        run: |
+          ./test/bats-runner test/test_symlink.bats
+          ./test/bats-runner test/test_deploy.bats
+          
+      - name: Test Makefile targets
+        run: |
+          make check
+          make help
+          make test
+
+  docker-test:
+    name: Docker Test - ${{ matrix.os }} - ${{ matrix.install }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu, archlinux]
+        install: [remote, local]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        
+      - name: Build test image
+        run: |
+          cd test/docker
+          docker build -f Dockerfile.${{ matrix.os }} -t dotfiles-test:${{ matrix.os }} .
+          
+      - name: Run installation test with Bats
+        run: |
+          cd test/docker
+          docker run --rm dotfiles-test:${{ matrix.os }} ./test_install.sh ${{ matrix.install }}
+
+  syntax-check:
+    name: Syntax and Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          
+      - name: Check bash syntax
+        run: |
+          for script in $(find . -name "*.sh" -type f); do
+            echo "Checking: $script"
+            bash -n "$script"
+          done
+          
+      - name: Run ShellCheck
+        run: |
+          for script in $(find . -name "*.sh" -type f ! -path "./test/bats/*"); do
+            echo "Checking: $script"
+            shellcheck -e SC1090,SC1091,SC2034 "$script" || true
+          done
+          
+      - name: Install Bats and run syntax tests
+        run: |
+          chmod +x test/install_bats.sh
+          ./test/install_bats.sh
+          ./test/bats-runner test/test_syntax.bats
+
+  all-tests-summary:
+    name: All Tests Summary
+    needs: [bats-tests, individual-bats-tests, integration-test, docker-test, syntax-check]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.bats-tests.result }}" != "success" ] || \
+             [ "${{ needs.individual-bats-tests.result }}" != "success" ] || \
+             [ "${{ needs.integration-test.result }}" != "success" ] || \
+             [ "${{ needs.docker-test.result }}" != "success" ] || \
+             [ "${{ needs.syntax-check.result }}" != "success" ]; then
+            echo "Some tests failed!"
+            exit 1
+          else
+            echo "All tests passed!"
+          fi

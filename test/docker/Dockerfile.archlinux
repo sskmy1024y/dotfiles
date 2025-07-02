@@ -1,0 +1,48 @@
+# Dockerfile for testing dotfiles installation on Arch Linux
+FROM archlinux:latest
+
+# Update system and install prerequisites
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm \
+    curl \
+    git \
+    sudo \
+    make \
+    base-devel \
+    which \
+    shellcheck \
+    openssh \
+    ncurses \
+    # Additional packages for Bats testing
+    bash \
+    coreutils \
+    findutils \
+    grep \
+    sed \
+    file \
+    && pacman -Scc --noconfirm
+
+# Create test user with sudo privileges
+RUN useradd -m -s /bin/bash testuser && \
+    echo "testuser:password" | chpasswd && \
+    echo "testuser ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Create sudoers.d directory if it doesn't exist
+RUN mkdir -p /etc/sudoers.d
+
+# Switch to test user
+USER testuser
+WORKDIR /home/testuser
+
+# Set environment variables
+ENV USER=testuser
+ENV HOME=/home/testuser
+ENV TERM=xterm-256color
+
+# Copy test script
+COPY test_install.sh /home/testuser/test_install.sh
+RUN sudo chown testuser:testuser /home/testuser/test_install.sh && \
+    sudo chmod +x /home/testuser/test_install.sh
+
+# Default command
+CMD ["/bin/bash"]

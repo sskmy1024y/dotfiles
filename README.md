@@ -13,7 +13,7 @@
 This is a repository with my configuration files, those are verified on Linux / macOS.
 
 Author: sskmy1024y  
-Date: 14/Aug/2021 
+Date: 2/Jul/2025 
 
 ## 📂 Directory structure
 
@@ -21,15 +21,22 @@ Date: 14/Aug/2021
 dotfiles/
  ├── bin/            # Useful command line scripts
  ├── config/         # Dotfiles
- │   ├── git
- │   ├── iterm
- │   ├── tmux
- │   └── zsh
+ │   ├── claude      # Claude AI configuration
+ │   ├── git         # Git configuration
+ │   ├── iterm       # iTerm2 configuration
+ │   ├── ssh         # SSH configuration
+ │   ├── tmux        # Tmux configuration
+ │   └── zsh         # Zsh shell configuration
  ├── doc/            # Document files
  ├── etc/
- │   ├── init        # Setup & Install scripts
- │   ├── scripts     # Install scripts for some packages
- │   └── lib         # Library scripts
+ │   ├── lib         # Library scripts
+ │   └── scripts     # Setup & Install scripts
+ │       ├── deep.d  # Advanced setup scripts
+ │       └── install.d # Package installation scripts
+ ├── test/           # Test suite
+ │   ├── bats        # Bats testing framework
+ │   ├── docker      # Docker test environments
+ │   └── *.bats      # Test files
  └── Makefile
 ```
 
@@ -57,11 +64,24 @@ $ make install
 
 Incidentally, `make install` will perform the following tasks.
 
-*   `make update` Updating dotfiles from this repository
-*   `make deploy` Deploying dotfiles to host
-*   `make init` Initializing some settings
+*   `make deploy` Deploying dotfiles to home directory (creating symlinks)
+*   `make init` Installing packages and setting up environment
 
-Other options can be checked with `make help`.
+### Available Commands
+
+```bash
+$ make help  # Show all available commands
+```
+
+| Command | Description |
+|---------|-------------|
+| `make install` | Run make deploy, init |
+| `make deploy` | Create symlink to home directory |
+| `make init` | Setup environment settings |
+| `make update` | Fetch changes for this repo |
+| `make deep` | Setup more finicky settings (fonts, advanced tools) |
+| `make clean` | Remove dotfiles and this repo |
+| `make check` | Check if it is ready to install |
 
 ## 💁‍♀️ Recommend
 
@@ -71,6 +91,61 @@ A script to automate the installation is placed in `etc/init/deep.d/98_font.sh`.
 
 ```bash
 $ make deep
+```
+
+## 🧪 Testing
+
+The dotfiles include comprehensive automated tests using Bats (Bash Automated Testing System) and Docker.
+
+### Running Tests
+
+```bash
+# Run local unit tests
+$ make test
+
+# Run all Docker-based integration tests
+$ make test-docker
+
+# Run Docker tests for specific OS
+$ make test-docker-ubuntu
+$ make test-docker-archlinux
+
+# Run Bats tests in Docker
+$ make test-bats                # Both Ubuntu and Arch Linux
+$ make test-bats-ubuntu          # Ubuntu only
+$ make test-bats-archlinux       # Arch Linux only
+$ make test-bats-ci              # CI mode (both OS)
+
+# Run macOS Docker test (requires Docker Desktop on macOS)
+$ make test-mac-local            # Run tests in macOS VM container
+
+# Rebuild Docker images and run tests
+$ make test-rebuild
+```
+
+### Test Structure
+
+- **Unit Tests (Bats)**: Fast, isolated tests for individual components
+  - `test/test_header.bats` - Tests for utility functions
+  - `test/test_symlink.bats` - Tests for symlink operations
+  - `test/test_deploy.bats` - Tests for deployment script
+  - `test/test_syntax.bats` - Syntax validation and linting
+
+- **Integration Tests (Docker)**: Full installation tests in isolated environments
+  - Tests both Ubuntu and Arch Linux
+  - Tests both remote (curl) and local installation methods
+  - Verifies actual system changes
+  - macOS test available using `trycua/lumier` VM (experimental)
+
+### Environment Variables
+
+- `CI` or `DOTFILES_TEST` - When set, SSH keys will be generated without passphrase prompts
+- `SKIP_BATS_TESTS` - Skip running Bats tests (useful when test directory is not available)
+
+For manual installations, you can set these variables to avoid interactive prompts:
+
+```bash
+$ DOTFILES_TEST=1 make deploy
 ```
 
 ## References
