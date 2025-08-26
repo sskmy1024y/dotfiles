@@ -37,16 +37,16 @@ darwin() {
     info "brew: installed successfully."
   fi
 
-  info "Google Chrome.app"
-  brew install --cask "google-chrome"
+  info "Arc.app"
+  brew install --cask "arc"
 
-  info "iTerm2.app"
-  brew install --cask "iterm2"
+  info "Warp.app"
+  brew install --cask "warp"
 
   info "1password.app"
   brew install --cask "1password"
   
-  info "Visual Studio Code.app"
+  info "VS Code.app"
   brew install --cask "visual-studio-code"
 
   info "InteliJ.app"
@@ -55,10 +55,10 @@ darwin() {
   info "Figma.app"
   brew install --cask "figma"
 
-  info "Monitor Control.app"
-  brew install --cask monitorcontrol
+  info "Raycast.app"
+  brew install --cask raycast
 
-  info "Initialing AltTab.app"
+  info "AltTab.app"
   brew install alt-tab
 }
 

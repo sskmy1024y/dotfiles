@@ -91,6 +91,7 @@ ensure_dir "$HOME/.claude"
 symlink "$CONFPATH/claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
 symlink "$CONFPATH/claude/settings.json" "$HOME/.claude/settings.json"
 symlink "$CONFPATH/claude/commands" "$HOME/.claude/commands"
+symlink "$CONFPATH/claude/agents" "$HOME/.claude/agents"
 
 # local binary
 deploy_config "binary"

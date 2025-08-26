@@ -38,10 +38,13 @@ setopt hist_verify
 setopt share_history  # シェルのプロセスごとに履歴を共有
 setopt extended_history  # 履歴ファイルに時刻を記録
 setopt auto_cd  # ディレクトリ名だけで移動
-chpwd() { ls -ltr }  # cdの後にlsを実行
-setopt auto_list  # 補完候補が複数ある時に、一覧表示
-setopt auto_menu  # 補完候補が複数あるときに自動的に一覧表示する
-setopt complete_in_word  # カーソル位置で補完する。
+
+if test `hostname` != '%no_root_host%' && [ -z "$CLAUDECODE"]; then
+  chpwd() { ls -ltr }  # cdの後にlsを実行
+  setopt auto_list  # 補完候補が複数ある時に、一覧表示
+  setopt auto_menu  # 補完候補が複数あるときに自動的に一覧表示する
+  setopt complete_in_word  # カーソル位置で補完する。
+fi
 
 # コマンド履歴
 HISTFILE=~/.zsh_history
