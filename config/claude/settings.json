@@ -34,5 +34,11 @@
   "statusLine": {
     "type": "command",
     "command": "npx -y ccusage statusline"
-  }
+  },
+  "enabledPlugins": {
+    "document-skills@anthropic-agent-skills": true,
+    "example-skills@anthropic-agent-skills": true,
+    "code-simplifier@claude-plugins-official": true
+  },
+  "alwaysThinkingEnabled": true
 }

@@ -8,6 +8,7 @@ export PATH=$PATH:$HOME/sh
 export PATH=$HOME/.local/bin:$PATH
 if "$(is_arm_darwin)" ; then
   export PATH=/opt/homebrew/bin:$PATH
+  export PATH=/opt/homebrew/opt/libpq/bin:$PATH
   export ZPLUG_HOME=/opt/homebrew/opt/zplug
 else
   export ZPLUG_HOME=/usr/local/opt/zplug
