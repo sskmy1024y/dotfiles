@@ -8,8 +8,10 @@ alias la='ls -la'
 # * anyenv, nodenv, pyenvの設定
 ## =============================
 
-# pyenvで余計なアプリがインストールされないように設定
-export PYTHON_CONFIGURE_OPTS="--enable-framework=no --disable-tk"
+# [macosのみ] pyenvで余計なアプリがインストールされないように設定
+if [ "$(detect_os)" = "darwin" ]; then
+  export PYTHON_CONFIGURE_OPTS="--enable-framework=no --disable-tk"
+fi
 
 if is_exists "anyenv"; then
    if ! [ -f /tmp/anyenv.cache ]; then
