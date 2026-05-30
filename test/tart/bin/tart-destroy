@@ -50,17 +50,28 @@ fi
 
 # Collect VM names from `tart list`.
 # `tart list` columns: Source Name Disk Size State
-mapfile -t VMS < <(tart list 2>/dev/null | awk 'NR>1 {print $2}' || true)
+#
+# We avoid `mapfile`/`readarray` here because the system bash on macOS is 3.2
+# and doesn't ship either builtin. A while-read loop with explicit array push
+# is the portable equivalent.
+VMS=()
+while IFS= read -r line; do
+  [ -n "$line" ] && VMS+=("$line")
+done < <(tart list 2>/dev/null | awk 'NR>1 {print $2}' || true)
 
 count=0
-for name in "${VMS[@]}"; do
-  case "$name" in
-    "${TART_TEST_VM_PREFIX}-"*)
-      vm_destroy "$name"
-      count=$((count + 1))
-      ;;
-  esac
-done
+# Bash 3.2 + `set -u` treats `"${empty_array[@]}"` as an unbound expansion,
+# so guard the iteration on array size.
+if [ "${#VMS[@]}" -gt 0 ]; then
+  for name in "${VMS[@]}"; do
+    case "$name" in
+      "${TART_TEST_VM_PREFIX}-"*)
+        vm_destroy "$name"
+        count=$((count + 1))
+        ;;
+    esac
+  done
+fi
 
 if [ "$KILL_BASE" = true ] && vm_exists "$TART_BASE_VM"; then
   vm_destroy "$TART_BASE_VM"
