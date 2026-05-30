@@ -13,6 +13,7 @@ fi
 
 # load lib script (functions)
 . "$DOTPATH"/etc/lib/header.sh
+. "$DOTPATH"/etc/lib/macos.sh
 
 
 brewery() {
@@ -20,13 +21,15 @@ brewery() {
   info "10 Brew bundle"
   echo ""
 
-  if is_exists "brew"; then
-    info "Homebrew is already installed"
-  else
-    warn "Homebrew has not installed yet"
-    xcode-select --install
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    info "brew: installed successfully."
+  # Defensive: ensure CLT + brew are present. Normally 00_package.sh has
+  # already done this, but running 10_brew.sh standalone should also work.
+  if ! ensure_xcode_clt; then
+    error "Cannot continue without Xcode Command Line Tools."
+    return 1
+  fi
+  if ! ensure_homebrew; then
+    error "Cannot continue without Homebrew."
+    return 1
   fi
 
   builtin cd "$DOTPATH"/etc/scripts/install.d

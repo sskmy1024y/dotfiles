@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# tart-prepare
+#
+# Pull the vanilla macOS image and clone it to a long-lived "base" VM.
+# Subsequent test runs clone from this base for speed.
+#
+# Usage:
+#   ./tart-prepare              # use defaults
+#   TART_BASE_IMAGE=... ./tart-prepare
+#
+# Idempotent: re-running with the base VM already present is a no-op
+# unless --force is passed.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/tart-helpers.sh
+source "${SCRIPT_DIR}/../lib/tart-helpers.sh"
+
+FORCE=false
+for arg in "$@"; do
+  case "$arg" in
+    --force|-f) FORCE=true ;;
+    -h|--help)
+      cat <<EOF
+Usage: tart-prepare [--force]
+
+Pulls ${TART_BASE_IMAGE} and clones it locally as '${TART_BASE_VM}'.
+Pass --force to re-pull and recreate the base VM.
+EOF
+      exit 0
+      ;;
+    *) error "Unknown argument: $arg"; exit 2 ;;
+  esac
+done
+
+require_apple_silicon
+require_tools
+
+if vm_exists "$TART_BASE_VM" && [ "$FORCE" = false ]; then
+  info "Base VM '${TART_BASE_VM}' already exists. Skipping (use --force to recreate)."
+  exit 0
+fi
+
+if [ "$FORCE" = true ] && vm_exists "$TART_BASE_VM"; then
+  warn "--force specified; removing existing base VM."
+  tart stop "$TART_BASE_VM" >/dev/null 2>&1 || true
+  tart delete "$TART_BASE_VM"
+fi
+
+step "Pulling ${TART_BASE_IMAGE} (this can take 30-60 minutes on first run)..."
+tart pull "$TART_BASE_IMAGE"
+
+step "Cloning into base VM '${TART_BASE_VM}'..."
+tart clone "$TART_BASE_IMAGE" "$TART_BASE_VM"
+
+info "Base VM '${TART_BASE_VM}' is ready."
+log "Next steps:"
+log "  make -C test/tart oneliner   # test the curl one-liner"
+log "  make -C test/tart full       # test the full install flow"

@@ -78,10 +78,19 @@ ensure_dir "$HOME/.git_template/hooks"
 
 # tmux
 deploy_config "tmux"
-if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
-  git clone https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
-fi
 symlink "$CONFPATH/tmux/.tmux.conf" "$HOME/.tmux.conf"
+# TPM (tmux plugin manager) needs `git`, which on a fresh macOS is not yet
+# installed at this point — `make deploy` runs before `make init`. So we
+# defer the actual clone to etc/scripts/install.d/30_tmux.sh, which runs
+# after git is on PATH. Here we only handle the case where git already
+# exists so re-running `make deploy` on a populated machine still works.
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+  if is_exists "git"; then
+    git clone https://github.com/tmux-plugins/tpm "$HOME"/.tmux/plugins/tpm
+  else
+    warn "git not found; skipping TPM clone (will run during 'make init')"
+  fi
+fi
 # shellcheck disable=SC2016
 log 'Add to your shell: export PATH="$HOME/.tmux/bin:$PATH"'
 

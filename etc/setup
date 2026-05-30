@@ -67,16 +67,19 @@ _download() {
       info "Downloaded"
 
     elif is_exists "curl" || is_exists "wget"; then
-      local zip_url="https://github.com/sskmy1024y/dotfiles/archive/master.zip"
+      # NOTE: we use the .tar.gz archive (NOT master.zip) so we can pipe
+      # straight into `tar xz` without needing `unzip` (which is not
+      # guaranteed on a fresh macOS).
+      local tarball_url="https://github.com/sskmy1024y/dotfiles/archive/refs/heads/master.tar.gz"
 
       if is_exists "curl"; then
-        curl -L "$zip_url" | tar xvz
+        curl -fsSL "$tarball_url" | tar xz
       else
-        wget -O - "$zip_url" | tar xvz
+        wget -qO- "$tarball_url" | tar xz
       fi
-      
+
       if [ ! -d dotfiles-master ]; then
-        error "dotfiles-master: not found"
+        error "dotfiles-master: not found after extracting ${tarball_url}"
         exit 1
       fi
       mv -f dotfiles-master "$DOTPATH"
