@@ -11,6 +11,10 @@
 #
 # Sourced by tart-run; assumes VM_IP and the helper functions are defined.
 
+# These scripts are dual-mode (sourced OR executed standalone), so each error
+# branch ends with `return … 2>/dev/null || exit …`. ShellCheck flags the
+# `exit` half as unreachable, which it isn't when the script is executed.
+# shellcheck disable=SC2317
 set -uo pipefail
 
 ONELINER_URL="${ONELINER_URL:-https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/setup}"

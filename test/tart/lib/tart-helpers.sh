@@ -220,6 +220,6 @@ vm_run_bg() {
   local name="$1"; shift
   # --no-graphics keeps it headless; nohup detaches from this shell.
   nohup tart run --no-graphics "$@" "$name" \
-    >/tmp/tart-${name}.log 2>&1 &
+    >"/tmp/tart-${name}.log" 2>&1 &
   echo $!
 }

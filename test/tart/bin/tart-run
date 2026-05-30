@@ -95,7 +95,19 @@ log "tart run PID: ${BG_PID} (log: /tmp/tart-${VM_NAME}.log)"
 
 # Wait for SSH and capture IP.
 VM_IP="$(vm_wait_ssh "$VM_NAME")"
-export VM_NAME VM_IP REPO_ROOT
+
+# Resolve the VM's $HOME once, so scenarios don't have to embed a literal
+# '$HOME' (which is ambiguous: rsync treats it literally, but a remote
+# `bash -c 'cd $HOME/...'` expands it — leaving the two out of sync).
+# shellcheck disable=SC2016  # $HOME must expand on the VM, not the host.
+REMOTE_HOME="$(vm_exec "$VM_IP" 'printf %s "$HOME"')"
+if [ -z "$REMOTE_HOME" ]; then
+  error "Could not resolve VM's \$HOME via SSH."
+  exit 1
+fi
+log "Remote \$HOME: ${REMOTE_HOME}"
+
+export VM_NAME VM_IP REPO_ROOT REMOTE_HOME
 export TART_SSH_USER TART_SSH_PASS
 
 # --shell mode: drop into interactive SSH and exit.

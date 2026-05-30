@@ -10,12 +10,17 @@
 #
 # Sourced by tart-run; assumes VM_IP, REPO_ROOT and the helper functions are defined.
 
+# These scripts are dual-mode (sourced OR executed standalone), so each error
+# branch ends with `return … 2>/dev/null || exit …`. ShellCheck flags the
+# `exit` half as unreachable, which it isn't when the script is executed.
+# shellcheck disable=SC2317
 set -uo pipefail
 
-# Use the VM's $HOME (expanded remotely) so this scenario doesn't depend on
-# a specific username layout (e.g. /Users/...) — and stays portable across
-# Cirrus image variants.
-REMOTE_DOTPATH='$HOME/.dotfiles'
+# tart-run resolves the VM's $HOME at boot and exports it as REMOTE_HOME, so
+# we can build an unambiguous absolute path here. (Embedding a literal
+# '$HOME' is unsafe: rsync treats it as a literal directory name, while a
+# remote `bash -c 'cd $HOME/...'` expands it — the two end up out of sync.)
+REMOTE_DOTPATH="${REMOTE_HOME}/.dotfiles"
 
 step "Scenario 02: local repo, make install"
 log "Pushing ${REPO_ROOT} -> ${TART_SSH_USER}@${VM_IP}:${REMOTE_DOTPATH}"
