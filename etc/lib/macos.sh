@@ -101,8 +101,13 @@ ensure_xcode_clt() {
   fi
 
   info "Installing: ${product}"
-  if ! softwareupdate -i "$product" --verbose; then
+  # softwareupdate -i must run as root. We rely on the caller having either
+  # passwordless sudo (CI / the Tart test harness configures this) or an
+  # already-cached sudo timestamp; either way, prompting here would hang a
+  # non-interactive install.
+  if ! sudo -n softwareupdate -i "$product" --verbose; then
     error "softwareupdate failed to install '${product}'"
+    error "Hint: ensure passwordless sudo is configured or run 'sudo -v' first."
     return 1
   fi
 

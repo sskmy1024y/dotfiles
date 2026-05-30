@@ -130,6 +130,27 @@ vm_exec() {
     "${TART_SSH_USER}@${ip}" "$@"
 }
 
+# Enable passwordless sudo for the SSH user inside an ephemeral test VM.
+#
+# Why: the Cirrus Labs vanilla image ships with admin/admin and an interactive
+# sudo prompt. Our scenarios run over a non-interactive SSH channel (no TTY),
+# so anything that calls `sudo -v`, `sudoers`-gated installers, or Homebrew's
+# bootstrap will hang waiting for a password. Configuring NOPASSWD here matches
+# what Cirrus CI and the GitHub Actions macOS runners do out of the box.
+#
+# Safety: only run this against ephemeral test VMs. It writes
+# /etc/sudoers.d/dotfiles-test inside the VM; the VM is destroyed at the end
+# of every scenario, so no host or long-lived state is touched.
+#
+# Usage: vm_enable_passwordless_sudo <vm-ip>
+vm_enable_passwordless_sudo() {
+  local ip="$1"
+  # `sudo -S` reads the password from stdin, which works without a TTY.
+  # The heredoc payload is intentionally tiny so a missing/changed password
+  # surfaces as an obvious sudo error rather than a silent partial config.
+  vm_exec "$ip" "sudo -S sh -c 'echo \"${TART_SSH_USER} ALL=(ALL) NOPASSWD:ALL\" > /etc/sudoers.d/dotfiles-test && chmod 440 /etc/sudoers.d/dotfiles-test'" <<<"$TART_SSH_PASS"
+}
+
 # Push a local directory into the VM via rsync over SSH.
 # Usage: vm_push <vm-ip> <local-path> <remote-path>
 vm_push() {

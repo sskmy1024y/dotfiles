@@ -107,6 +107,16 @@ if [ -z "$REMOTE_HOME" ]; then
 fi
 log "Remote \$HOME: ${REMOTE_HOME}"
 
+# Enable passwordless sudo in the ephemeral VM so scenarios can run installers
+# that call `sudo -v`, `softwareupdate -i`, or the Homebrew bootstrap over a
+# non-interactive SSH channel (no TTY). This matches the Cirrus / GitHub
+# Actions macOS runner default and is destroyed with the VM.
+step "Enabling passwordless sudo in the test VM"
+if ! vm_enable_passwordless_sudo "$VM_IP"; then
+  error "Could not enable passwordless sudo in VM '${VM_NAME}'."
+  exit 1
+fi
+
 export VM_NAME VM_IP REPO_ROOT REMOTE_HOME
 export TART_SSH_USER TART_SSH_PASS
 
