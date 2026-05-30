@@ -145,10 +145,37 @@ vm_exec() {
 # Usage: vm_enable_passwordless_sudo <vm-ip>
 vm_enable_passwordless_sudo() {
   local ip="$1"
-  # `sudo -S` reads the password from stdin, which works without a TTY.
-  # The heredoc payload is intentionally tiny so a missing/changed password
-  # surfaces as an obvious sudo error rather than a silent partial config.
-  vm_exec "$ip" "sudo -S sh -c 'echo \"${TART_SSH_USER} ALL=(ALL) NOPASSWD:ALL\" > /etc/sudoers.d/dotfiles-test && chmod 440 /etc/sudoers.d/dotfiles-test'" <<<"$TART_SSH_PASS"
+  # Strategy:
+  #   1. Ship the whole script as `bash`'s stdin over ssh, so the remote
+  #      login shell (zsh on Sequoia) doesn't re-parse our redirects and
+  #      quoting. The previous version embedded the command as a single
+  #      quoted argument and ended up returning 0 without /etc/sudoers.d
+  #      actually being effective — likely because remote-shell re-parsing
+  #      swallowed the `>` or `sudo -S` failed silently. Piping a heredoc
+  #      to remote `bash` keeps stdin ownership and parsing local.
+  #   2. Feed BOTH the sudo password (line 1) and the sudoers entry
+  #      (line 2) on the same pipe into `sudo -S | tee`. sudo consumes
+  #      line 1 to authenticate, then `tee` (running as root) reads the
+  #      rest and writes the file.
+  #   3. Verify with `sudo -n true` and dump diagnostics on failure — we
+  #      MUST fail loudly if NOPASSWD didn't activate, otherwise every
+  #      downstream `sudo -v` in the install scripts will hang.
+  vm_exec "$ip" bash <<EOF
+set -uo pipefail
+if ! printf '%s\n%s\n' '${TART_SSH_PASS}' '${TART_SSH_USER} ALL=(ALL) NOPASSWD:ALL' \\
+     | sudo -S -p '' tee /etc/sudoers.d/dotfiles-test >/dev/null; then
+  echo '[-] sudo -S failed to write /etc/sudoers.d/dotfiles-test' >&2
+  exit 1
+fi
+# NOPASSWD should now be active, so -n works without prompting.
+sudo -n chmod 440 /etc/sudoers.d/dotfiles-test
+if ! sudo -n true 2>/dev/null; then
+  echo '[-] passwordless sudo did NOT take effect; diagnostics:' >&2
+  ls -l /etc/sudoers.d/ >&2 || true
+  sudo -n cat /etc/sudoers.d/dotfiles-test >&2 2>&1 || true
+  exit 1
+fi
+EOF
 }
 
 # Push a local directory into the VM via rsync over SSH.
