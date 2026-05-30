@@ -146,29 +146,54 @@ vm_exec() {
 vm_enable_passwordless_sudo() {
   local ip="$1"
   # Strategy:
-  #   1. Ship the whole script as `bash`'s stdin over ssh, so the remote
-  #      login shell (zsh on Sequoia) doesn't re-parse our redirects and
-  #      quoting. The previous version embedded the command as a single
-  #      quoted argument and ended up returning 0 without /etc/sudoers.d
-  #      actually being effective — likely because remote-shell re-parsing
-  #      swallowed the `>` or `sudo -S` failed silently. Piping a heredoc
-  #      to remote `bash` keeps stdin ownership and parsing local.
-  #   2. Feed BOTH the sudo password (line 1) and the sudoers entry
-  #      (line 2) on the same pipe into `sudo -S | tee`. sudo consumes
-  #      line 1 to authenticate, then `tee` (running as root) reads the
-  #      rest and writes the file.
-  #   3. Verify with `sudo -n true` and dump diagnostics on failure — we
-  #      MUST fail loudly if NOPASSWD didn't activate, otherwise every
-  #      downstream `sudo -v` in the install scripts will hang.
+  #   Stage the sudoers body in a tempfile owned by 'admin' (no sudo
+  #   needed), then use `sudo -S install` to atomically promote it into
+  #   /etc/sudoers.d/ as root:wheel with mode 0440.
+  #
+  # Why not just pipe everything into `sudo -S tee`?
+  #   We tried that. On macOS the password line ended up IN the sudoers
+  #   file because `sudo -S` didn't consume it from stdin in a way that
+  #   hid it from the child `tee` — both lines reached tee. visudo then
+  #   rejected line 1 ("admin" alone), but the second line (valid NOPASSWD)
+  #   still parsed, so `sudo -n true` passed and the helper returned 0,
+  #   silently leaving a broken sudoers.d/ file. Later `sudo -v` calls
+  #   then re-read the file, hit the same syntax error, refused to
+  #   validate, and asked for a password — which hung with no TTY.
+  #
+  #   Putting the body in a tempfile first means the ONLY thing on the
+  #   sudo pipe is the password. There's no stdin to share with a child.
   vm_exec "$ip" bash <<EOF
 set -uo pipefail
-if ! printf '%s\n%s\n' '${TART_SSH_PASS}' '${TART_SSH_USER} ALL=(ALL) NOPASSWD:ALL' \\
-     | sudo -S -p '' tee /etc/sudoers.d/dotfiles-test >/dev/null; then
-  echo '[-] sudo -S failed to write /etc/sudoers.d/dotfiles-test' >&2
+
+# Fast path: if NOPASSWD is already live (some images preconfigure it),
+# do nothing.
+if sudo -n true 2>/dev/null; then
+  exit 0
+fi
+
+tmp=\$(mktemp /tmp/dotfiles-sudoers.XXXXXX) || {
+  echo '[-] mktemp failed' >&2; exit 1;
+}
+trap 'rm -f "\$tmp"' EXIT
+printf '%s\n' '${TART_SSH_USER} ALL=(ALL) NOPASSWD:ALL' > "\$tmp"
+
+# Validate before installing so a typo never produces an unrepairable
+# /etc/sudoers.d state (a broken sudoers.d/ file can lock root out).
+if command -v visudo >/dev/null 2>&1; then
+  if ! visudo -cf "\$tmp" >/dev/null; then
+    echo '[-] generated sudoers body failed visudo -cf:' >&2
+    cat "\$tmp" >&2
+    exit 1
+  fi
+fi
+
+# Atomic promotion as root. \`install\` sets owner/group/mode in one call.
+if ! printf '%s\n' '${TART_SSH_PASS}' \\
+     | sudo -S -p '' install -m 440 -o root -g wheel "\$tmp" /etc/sudoers.d/dotfiles-test; then
+  echo '[-] sudo -S install failed' >&2
   exit 1
 fi
-# NOPASSWD should now be active, so -n works without prompting.
-sudo -n chmod 440 /etc/sudoers.d/dotfiles-test
+
 if ! sudo -n true 2>/dev/null; then
   echo '[-] passwordless sudo did NOT take effect; diagnostics:' >&2
   ls -l /etc/sudoers.d/ >&2 || true
