@@ -89,13 +89,15 @@ vm_unique_name() {
   echo "${TART_TEST_VM_PREFIX}-$(date +%Y%m%d-%H%M%S)-$$"
 }
 
-# Block until the VM has an IP and accepts SSH.
+# Block until the VM has an IP and accepts SSH. The IP is printed on stdout
+# (so callers can do `ip="$(vm_wait_ssh ...)"`); all progress messages go to
+# stderr to avoid polluting the captured value.
 vm_wait_ssh() {
   local name="$1"
   local deadline=$(( $(date +%s) + TART_SSH_TIMEOUT ))
   local ip=""
 
-  step "Waiting for VM '${name}' to expose SSH (timeout: ${TART_SSH_TIMEOUT}s)..."
+  step "Waiting for VM '${name}' to expose SSH (timeout: ${TART_SSH_TIMEOUT}s)..." >&2
   while [ "$(date +%s)" -lt "$deadline" ]; do
     ip="$(tart ip "$name" 2>/dev/null || true)"
     if [ -n "$ip" ]; then
@@ -105,7 +107,7 @@ vm_wait_ssh() {
           -o UserKnownHostsFile=/dev/null \
           -o LogLevel=ERROR \
           "${TART_SSH_USER}@${ip}" true 2>/dev/null; then
-        info "VM '${name}' is up at ${ip}"
+        info "VM '${name}' is up at ${ip}" >&2
         echo "$ip"
         return 0
       fi
