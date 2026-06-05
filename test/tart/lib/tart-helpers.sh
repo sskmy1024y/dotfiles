@@ -165,9 +165,11 @@ vm_enable_passwordless_sudo() {
   vm_exec "$ip" bash <<EOF
 set -uo pipefail
 
-# Fast path: if NOPASSWD is already live (some images preconfigure it),
-# do nothing.
-if sudo -n true 2>/dev/null; then
+# Fast path: if \`sudo -v\` already succeeds non-interactively (image
+# preconfigured by Cirrus or a previous run on the same disk), do nothing.
+# Note: \`sudo -n -v\` (not \`-n true\`) — we want the exact code path the
+# install scripts use, otherwise we may skip the fix and break later.
+if sudo -n -v 2>/dev/null; then
   exit 0
 fi
 
@@ -175,7 +177,16 @@ tmp=\$(mktemp /tmp/dotfiles-sudoers.XXXXXX) || {
   echo '[-] mktemp failed' >&2; exit 1;
 }
 trap 'rm -f "\$tmp"' EXIT
-printf '%s\n' '${TART_SSH_USER} ALL=(ALL) NOPASSWD:ALL' > "\$tmp"
+# NOPASSWD alone is not enough: macOS ships '%admin ALL=(ALL) ALL'
+# (password required) in /etc/sudoers, and \`sudo -v\` will still
+# prompt as long as ANY entry for this user wants a password — even
+# if a NOPASSWD entry also exists. The \`Defaults:admin !authenticate\`
+# line tells sudo to skip authentication entirely for user 'admin',
+# which is what Cirrus CI and the GitHub Actions macOS runners do.
+printf '%s\n%s\n' \\
+  '${TART_SSH_USER} ALL=(ALL) NOPASSWD:ALL' \\
+  'Defaults:${TART_SSH_USER} !authenticate' \\
+  > "\$tmp"
 
 # Validate before installing so a typo never produces an unrepairable
 # /etc/sudoers.d state (a broken sudoers.d/ file can lock root out).
@@ -194,8 +205,13 @@ if ! printf '%s\n' '${TART_SSH_PASS}' \\
   exit 1
 fi
 
-if ! sudo -n true 2>/dev/null; then
-  echo '[-] passwordless sudo did NOT take effect; diagnostics:' >&2
+# Verify with \`sudo -n -v\` specifically — that is the exact code path
+# the install scripts hit (\`etc/scripts/init\` runs \`sudo -v\`). \`sudo -n true\`
+# would pass with just NOPASSWD; \`sudo -n -v\` only passes when no
+# entry for this user requires authentication. If this fails we MUST
+# fail loudly here, before the scenario hangs waiting for a TTY.
+if ! sudo -n -v 2>/dev/null; then
+  echo '[-] passwordless sudo did NOT take effect for \`sudo -v\`; diagnostics:' >&2
   ls -l /etc/sudoers.d/ >&2 || true
   sudo -n cat /etc/sudoers.d/dotfiles-test >&2 2>&1 || true
   exit 1
