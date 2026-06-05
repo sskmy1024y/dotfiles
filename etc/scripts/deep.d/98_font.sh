@@ -47,12 +47,37 @@ fi
 mkdir -p "$DOTPATH/tmp" && cd "$DOTPATH/tmp"
 
 # Download Nerd fonts
+#
+# We only need `font-patcher` (top-level script) and the `src/` glyph sources
+# to repatch Cica. The repo's `patched-fonts/` directory is multi-GB and
+# blows out the Tart test VM disk if checked out (`No space left on device`).
+# Use a partial + sparse clone in cone mode: top-level files are always
+# included, plus the directories we list. patched-fonts/, images/, etc. stay
+# remote.
 nerd_url="https://github.com/ryanoasis/nerd-fonts.git"
-git clone --depth 1 "$nerd_url" && cd nerd-fonts && mkdir -p orig dist
+rm -rf nerd-fonts
+git clone --depth 1 --filter=blob:none --sparse "$nerd_url"
+cd nerd-fonts
+git sparse-checkout set --cone src bin
+mkdir -p orig dist
 
 # Download Cica fonts
-cica_url=$(curl -s https://api.github.com/repos/miiton/Cica/releases/latest | grep "browser_download_url.*zip" | grep "with_emoji" | cut -d '"' -f 4)
-curl -L "$cica_url" | tar -xvz -C orig
+# miiton/Cica ships releases as .zip, NOT .tar.gz — piping into `tar -xvz`
+# silently fails. Stage the archive on disk and use `unzip` (always present
+# on macOS and easy to install on Linux).
+cica_url=$(curl -fsSL https://api.github.com/repos/miiton/Cica/releases/latest \
+  | grep "browser_download_url.*zip" \
+  | grep "with_emoji" \
+  | cut -d '"' -f 4 \
+  | head -n 1)
+if [ -z "$cica_url" ]; then
+  error "Could not resolve Cica release URL from GitHub API."
+  exit 1
+fi
+cica_zip="$DOTPATH/tmp/cica.zip"
+curl -fsSL "$cica_url" -o "$cica_zip"
+unzip -q -o "$cica_zip" -d orig
+rm -f "$cica_zip"
 
 # Cica fonts repatched mapping
 find orig/ -type f -name "*.ttf" -print0 | while IFS= read -r -d '' font; do
