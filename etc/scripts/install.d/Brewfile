@@ -27,6 +27,8 @@ brew "zplug"
 brew "fzf"
 brew "tree"
 brew "go"
+# Required by deep.d/98_font.sh (Nerd Font patcher / Cica build)
+brew "fontforge"
 
 cask "google-cloud-sdk"
 

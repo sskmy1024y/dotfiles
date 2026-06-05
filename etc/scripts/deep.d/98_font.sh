@@ -15,13 +15,33 @@ fi
 # shellcheck source=/dev/null
 # shellcheck disable=SC1091
 . "$DOTPATH"/etc/lib/header.sh
+# shellcheck source=/dev/null
+# shellcheck disable=SC1091
+. "$DOTPATH"/etc/lib/macos.sh
 
+# On macOS, make sure brew is on PATH for the current shell — `make init` adds
+# /opt/homebrew/bin via ~/.zprofile, but a fresh `make deep` shell hasn't
+# sourced that yet.
+if [ "$(detect_os)" = "darwin" ]; then
+  brew_on_path
+fi
 
 if is_exists "fontforge"; then
   info "98 Install fonts..."
 else
-  error "fontforge required"
-  exit 1
+  # fontforge missing — try to install it via brew (macOS) rather than failing
+  # outright. Lets `make deep` succeed even when fontforge isn't in Brewfile or
+  # `make init` was skipped.
+  if [ "$(detect_os)" = "darwin" ] && is_exists "brew"; then
+    info "fontforge not found — installing via brew..."
+    brew install fontforge
+  fi
+
+  if ! is_exists "fontforge"; then
+    error "fontforge required (install: 'brew install fontforge' on macOS, or your distro's package)"
+    exit 1
+  fi
+  info "98 Install fonts..."
 fi
 
 mkdir -p "$DOTPATH/tmp" && cd "$DOTPATH/tmp"

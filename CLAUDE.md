@@ -54,13 +54,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `etc/scripts/install.d/` - Numbered installer steps (00 packages, 10 brew, 20 anyenv, 21 node, 22 python, 30 tmux/TPM, ...)
 - `etc/scripts/deep.d/` - Advanced setup scripts including font installation
 - `etc/lib/header.sh` - Shared functions for symlink creation, OS detection, and colored output
-- `etc/lib/macos.sh` - macOS-only helpers: `ensure_xcode_clt` (non-interactive CLT install via `softwareupdate`), `ensure_homebrew` (idempotent brew bootstrap, fixes PATH), `brew_prefix` / `brew_on_path`. Sourced by `00_package.sh` and `10_brew.sh`.
+- `etc/lib/macos.sh` - macOS-only helpers: `ensure_xcode_clt` (non-interactive CLT install via `softwareupdate`), `ensure_homebrew` (idempotent brew bootstrap, fixes PATH), `brew_prefix` / `brew_on_path`. Sourced by `install.d/00_package.sh`, `install.d/10_brew.sh`, and `deep.d/{97_applications,98_font}.sh` — any script that needs `brew` on PATH in the current shell must source this.
 
 ### Install ordering on macOS
 1. `deploy` creates symlinks. **TPM (tmux plugin manager) clone is deferred** here if `git` is missing — it runs later from `install.d/30_tmux.sh` after git is installed via brew.
 2. `init` runs `install.d/*.sh` in numeric order. On macOS this means `00_package.sh` ensures Xcode CLT + brew + core packages, `10_brew.sh` applies the `Brewfile`, then `30_tmux.sh` clones TPM.
 
 The one-liner `etc/setup` downloads the GitHub **tarball** (`master.tar.gz`) — NOT the zip — so it can be piped straight into `tar xz` without needing `unzip` on a fresh macOS.
+
+### `make deep` notes (macOS)
+- `make deep` runs `etc/scripts/deep.d/*.sh` via `find | sort | bash`. Bash reads each filename from stdin as a command; non-zero exit from an early script does **not** stop later scripts, but the LAST script's exit code is what `make` sees.
+- `deep.d/97_applications.sh` and `deep.d/98_font.sh` MUST call `ensure_homebrew` / `brew_on_path` from `macos.sh`. A fresh `make deep` shell hasn't sourced `~/.zprofile`, so `brew` isn't on PATH and naive `is_exists brew` checks return false.
+- `deep.d/98_font.sh` requires `fontforge` for the Nerd Font / Cica patcher. It's listed in `Brewfile`, and the script also self-installs it via `brew install fontforge` as a fallback.
+- `deep.d/99_others.sh`: `sudo spctl --master-disable` was deprecated in macOS Sequoia (15.x) — it prints `Globally disabling the assessment system needs to be confirmed in System Settings.` and exits non-zero. The script tolerates this with a warning so `make deep` doesn't abort.
 
 ### Key Files
 - `Makefile` - Main entry point for all operations

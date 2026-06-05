@@ -13,6 +13,7 @@ fi
 
 # load lib script (functions)
 . "$DOTPATH"/etc/lib/header.sh
+. "$DOTPATH"/etc/lib/macos.sh
 
 
 echo ""
@@ -28,13 +29,16 @@ archlinux() {
 }
 
 darwin() {
-  if is_exists "brew"; then
-    info "Homebrew is already installed"
-  else
-    warn "Homebrew has not installed yet"
-    xcode-select --install
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    info "brew: installed successfully."
+  # Defensive: same pattern as install.d/10_brew.sh. Running deep.d standalone
+  # (e.g. on a fresh VM where `make init` didn't add brew to the current
+  # shell's PATH) must still work without GUI prompts.
+  if ! ensure_xcode_clt; then
+    error "Cannot continue without Xcode Command Line Tools."
+    return 1
+  fi
+  if ! ensure_homebrew; then
+    error "Cannot continue without Homebrew."
+    return 1
   fi
 
   info "Arc.app"
@@ -45,7 +49,7 @@ darwin() {
 
   info "1password.app"
   brew install --cask "1password"
-  
+
   info "VS Code.app"
   brew install --cask "visual-studio-code"
 
@@ -59,7 +63,7 @@ darwin() {
   brew install --cask raycast
 
   info "AltTab.app"
-  brew install alt-tab
+  brew install --cask alt-tab
 }
 
 android() {
