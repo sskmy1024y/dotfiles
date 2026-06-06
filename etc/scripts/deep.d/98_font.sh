@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
+#
+# 98_font.sh — Install the Cica programming font.
+#
+# Cica ships from upstream already merged with Nerd Fonts glyphs (and
+# optionally Noto Color Emoji), so we do NOT need fontforge / nerd-fonts /
+# font-patcher. We just download the latest release zip and drop its *.ttf
+# files into the OS font directory.
+#
+# Other Nerd Fonts (Meslo, JetBrains Mono, Hack, FiraCode, ...) are installed
+# via Homebrew casks from the Brewfile on macOS; this script handles only the
+# one font that isn't packaged for brew.
 
 # Author: takuzoo3868
-# Last Modified: 15 Feb 2021.
+# Last Modified: 06 Jun 2026.
 
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
@@ -15,91 +26,78 @@ fi
 # shellcheck source=/dev/null
 # shellcheck disable=SC1091
 . "$DOTPATH"/etc/lib/header.sh
-# shellcheck source=/dev/null
-# shellcheck disable=SC1091
-. "$DOTPATH"/etc/lib/macos.sh
 
-# On macOS, make sure brew is on PATH for the current shell — `make init` adds
-# /opt/homebrew/bin via ~/.zprofile, but a fresh `make deep` shell hasn't
-# sourced that yet.
-if [ "$(detect_os)" = "darwin" ]; then
-  brew_on_path
-fi
+echo ""
+info "98 Install Cica font (already Nerd-Font-patched upstream)"
+echo ""
 
-if is_exists "fontforge"; then
-  info "98 Install fonts..."
-else
-  # fontforge missing — try to install it via brew (macOS) rather than failing
-  # outright. Lets `make deep` succeed even when fontforge isn't in Brewfile or
-  # `make init` was skipped.
-  if [ "$(detect_os)" = "darwin" ] && is_exists "brew"; then
-    info "fontforge not found — installing via brew..."
-    brew install fontforge
-  fi
-
-  if ! is_exists "fontforge"; then
-    error "fontforge required (install: 'brew install fontforge' on macOS, or your distro's package)"
-    exit 1
-  fi
-  info "98 Install fonts..."
-fi
-
-mkdir -p "$DOTPATH/tmp" && cd "$DOTPATH/tmp"
-
-# Download Nerd fonts
-#
-# We only need `font-patcher` (top-level script) and the `src/` glyph sources
-# to repatch Cica. The repo's `patched-fonts/` directory is multi-GB and
-# blows out the Tart test VM disk if checked out (`No space left on device`).
-# Use a partial + sparse clone in cone mode: top-level files are always
-# included, plus the directories we list. patched-fonts/, images/, etc. stay
-# remote.
-nerd_url="https://github.com/ryanoasis/nerd-fonts.git"
-rm -rf nerd-fonts
-git clone --depth 1 --filter=blob:none --sparse "$nerd_url"
-cd nerd-fonts
-git sparse-checkout set --cone src bin
-mkdir -p orig dist
-
-# Download Cica fonts
-# miiton/Cica ships releases as .zip, NOT .tar.gz — piping into `tar -xvz`
-# silently fails. Stage the archive on disk and use `unzip` (always present
-# on macOS and easy to install on Linux).
-cica_url=$(curl -fsSL https://api.github.com/repos/miiton/Cica/releases/latest \
-  | grep "browser_download_url.*zip" \
-  | grep "with_emoji" \
-  | cut -d '"' -f 4 \
-  | head -n 1)
-if [ -z "$cica_url" ]; then
-  error "Could not resolve Cica release URL from GitHub API."
-  exit 1
-fi
-cica_zip="$DOTPATH/tmp/cica.zip"
-curl -fsSL "$cica_url" -o "$cica_zip"
-unzip -q -o "$cica_zip" -d orig
-rm -f "$cica_zip"
-
-# Cica fonts repatched mapping
-find orig/ -type f -name "*.ttf" -print0 | while IFS= read -r -d '' font; do
-  fontforge -script font-patcher -c "$font" --out dist
-done
-
-# Rename whitespace to underscore
-find dist -type f -name "*.ttf" | while IFS= read -r org_name; do
-  new_name="${org_name// /_}"
-  mv "$org_name" "$new_name"
-done
-
-# Copy to font directory
-# Set fonts_dir based on OS
+# Pick OS-appropriate user font directory.
 case "$(detect_os)" in
   darwin) fonts_dir="$HOME/Library/Fonts" ;;
-  linux) fonts_dir="$HOME/.local/share/fonts" ;;
+  ubuntu|archlinux|linux) fonts_dir="$HOME/.local/share/fonts" ;;
   *) fonts_dir="$HOME/.fonts" ;;
 esac
-
 mkdir -p "$fonts_dir"
-cp -u dist/* "$fonts_dir"
 
-cd "$DOTPATH"
-rm -rf tmp
+# Stage downloads under a self-cleaning temp dir so we never leave partial
+# zips behind in $DOTPATH/tmp.
+tmp_dir="$(mktemp -d)"
+cleanup() { rm -rf "$tmp_dir"; }
+trap cleanup EXIT
+
+# Resolve the latest "with emoji" release zip. miiton/Cica ships two zips per
+# release; the default (no "_without_emoji" suffix) bundles Noto Color Emoji.
+# We use grep -v rather than grep "with_emoji" because the naming convention
+# changed in v5: the with-emoji build no longer has a suffix at all.
+if ! api_json=$(curl -fsSL https://api.github.com/repos/miiton/Cica/releases/latest); then
+  warn "Failed to query Cica releases from GitHub API (rate-limited?); skipping Cica install."
+  exit 0
+fi
+
+cica_url=$(printf '%s' "$api_json" \
+  | grep '"browser_download_url".*\.zip"' \
+  | grep -v "without_emoji" \
+  | head -n 1 \
+  | cut -d '"' -f 4)
+
+if [ -z "$cica_url" ]; then
+  warn "Could not resolve a Cica zip URL from GitHub API; skipping Cica install."
+  exit 0
+fi
+
+info "Downloading Cica from $cica_url"
+if ! curl -fsSL "$cica_url" -o "$tmp_dir/cica.zip"; then
+  warn "Cica download failed; skipping Cica install."
+  exit 0
+fi
+
+# `unzip` ships with macOS by default and is in the base install on most
+# Linux distros; if it ever isn't, surface that as a hard error so a real
+# install doesn't silently skip the font.
+if ! command -v unzip >/dev/null 2>&1; then
+  error "unzip not found; install it (e.g. 'apt install unzip') and retry."
+  exit 1
+fi
+
+unzip -q -o "$tmp_dir/cica.zip" -d "$tmp_dir/cica"
+
+# Copy every .ttf the archive contains into the user font dir. -f overwrites
+# stale copies (e.g. upgrading from a previous version).
+found=0
+while IFS= read -r -d '' ttf; do
+  cp -f "$ttf" "$fonts_dir/"
+  found=$((found + 1))
+done < <(find "$tmp_dir/cica" -type f -name '*.ttf' -print0)
+
+if [ "$found" -eq 0 ]; then
+  warn "Cica zip contained no .ttf files (unexpected); leaving fonts untouched."
+  exit 0
+fi
+
+# macOS: nudge the font registration daemon so apps pick up the new family
+# without requiring a logout. Best-effort only.
+if [ "$(detect_os)" = "darwin" ]; then
+  atsutil databases -remove >/dev/null 2>&1 || true
+fi
+
+info "Installed ${found} Cica .ttf file(s) into ${fonts_dir}"

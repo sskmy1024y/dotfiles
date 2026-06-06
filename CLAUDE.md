@@ -64,8 +64,8 @@ The one-liner `etc/setup` downloads the GitHub **tarball** (`master.tar.gz`) —
 
 ### `make deep` notes (macOS)
 - `make deep` runs `etc/scripts/deep.d/*.sh` via `find | sort | bash`. Bash reads each filename from stdin as a command; non-zero exit from an early script does **not** stop later scripts, but the LAST script's exit code is what `make` sees.
-- `deep.d/97_applications.sh` and `deep.d/98_font.sh` MUST call `ensure_homebrew` / `brew_on_path` from `macos.sh`. A fresh `make deep` shell hasn't sourced `~/.zprofile`, so `brew` isn't on PATH and naive `is_exists brew` checks return false.
-- `deep.d/98_font.sh` requires `fontforge` for the Nerd Font / Cica patcher. It's listed in `Brewfile`, and the script also self-installs it via `brew install fontforge` as a fallback.
+- `deep.d/97_applications.sh` MUST call `ensure_homebrew` / `brew_on_path` from `macos.sh`. A fresh `make deep` shell hasn't sourced `~/.zprofile`, so `brew` isn't on PATH and naive `is_exists brew` checks return false.
+- `deep.d/98_font.sh` installs **Cica only** — by downloading the upstream zip from `miiton/Cica` releases (Cica is already pre-patched with Nerd Font glyphs, so no `fontforge` / `nerd-fonts` / `font-patcher` is involved). Other Nerd Fonts (Meslo, JetBrains Mono, Hack, FiraCode) are installed via casks in `Brewfile`. The script also falls back to `warn + exit 0` if the GitHub API is rate-limited so a single font failure doesn't kill `make deep`.
 - `deep.d/99_others.sh`: `sudo spctl --master-disable` was deprecated in macOS Sequoia (15.x) — it prints `Globally disabling the assessment system needs to be confirmed in System Settings.` and exits non-zero. The script tolerates this with a warning so `make deep` doesn't abort.
 
 ### Key Files
