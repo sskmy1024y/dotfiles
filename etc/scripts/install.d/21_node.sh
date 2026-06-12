@@ -19,18 +19,58 @@ echo ""
 info "21 Install Node"
 echo ""
 
+NODE_VERSION="24.16.0"
+
+anyenv_on_path() {
+  if [ -d "$HOME/.anyenv/bin" ]; then
+    export PATH="$HOME/.anyenv/bin:$PATH"
+  fi
+
+  local env_dir
+  for env_dir in "$HOME"/.anyenv/envs/*; do
+    [ -d "$env_dir" ] || continue
+    [ -d "$env_dir/bin" ] && export PATH="$env_dir/bin:$PATH"
+    [ -d "$env_dir/shims" ] && export PATH="$env_dir/shims:$PATH"
+  done
+
+  if [ -d "$HOME/.anyenv/envs/nodenv" ]; then
+    export NODENV_ROOT="$HOME/.anyenv/envs/nodenv"
+    [ -d "$NODENV_ROOT/plugins/node-build/bin" ] && export PATH="$NODENV_ROOT/plugins/node-build/bin:$PATH"
+  fi
+  return 0
+}
+
+clone_or_skip() {
+  local repo="$1"
+  local dest="$2"
+
+  if [ -d "$dest/.git" ]; then
+    info "$(basename "$dest") is already installed"
+  elif [ -e "$dest" ]; then
+    warn "$dest already exists; skip clone"
+  else
+    git clone "$repo" "$dest"
+  fi
+}
+
+anyenv_on_path
+
 # install python
 install_node(){
   if is_exists "nodenv"; then
-    if [ ! -d "$HOME/.anyenv/envs/nodenv/versions/16.4.0" ]; then
-      nodenv install 16.4.0
-      nodenv global 16.4.0
+    if [ ! -d "$HOME/.anyenv/envs/nodenv/versions/$NODE_VERSION" ]; then
+      nodenv install "$NODE_VERSION"
     fi
-    info "Installed node 16.4.0"
-    exec $SHELL -l
+    nodenv global "$NODE_VERSION"
+    info "Installed node $NODE_VERSION"
   else
     warn "nodenv not found. installing..."
-    install_anyenv
+    bash "$DOTPATH"/etc/scripts/install.d/20_anyenv.sh
+    anyenv_on_path
+    if ! is_exists "nodenv"; then
+      error "nodenv is not available after anyenv install"
+      return 1
+    fi
     install_node
   fi
 }
@@ -38,18 +78,6 @@ install_node(){
 install_node
 
 if is_exists "nodenv"; then
-  git clone https://github.com/nodenv/nodenv-package-json-engine.git "$(nodenv root)/plugins/nodenv-package-json-engine"
-fi
-
-if is_exists "yarn"; then
-  info "Installed yarn."
-else
-  npm install -g yarn
-fi
-
-if is_exists "git-cz"; then
-  info "Installed git-cz."
-else
-  npm install -g commitizen
-  npm install -g cz-emoji
+  mkdir -p "$(nodenv root)/plugins"
+  clone_or_skip https://github.com/nodenv/nodenv-package-json-engine.git "$(nodenv root)/plugins/nodenv-package-json-engine"
 fi

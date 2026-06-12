@@ -108,6 +108,31 @@ exit 1
     assert_output --partial "git tmux curl zsh"
 }
 
+@test "brew_install_default_formulas reaches brew install with set -e enabled" {
+    mkdir -p "$TEST_TEMP_DIR/homebrew"
+    mock_command "brew" '
+if [ "$1" = "--prefix" ]; then
+    echo "$TEST_TEMP_DIR/homebrew"
+    exit 0
+fi
+if [ "$1" = "list" ] && [ "$2" = "--formula" ] && [ "$3" = "--versions" ]; then
+    case "$4" in
+        git|tmux|curl|zsh) echo "$4 1.0"; exit 0 ;;
+    esac
+fi
+if [ "$1" = "install" ]; then
+    shift
+    printf "%s\n" "$*"
+    exit 0
+fi
+exit 1
+'
+
+    run bash -c "set -e; source '$DOTPATH/etc/lib/header.sh'; source '$DOTPATH/etc/lib/macos.sh'; brew_install_default_formulas git tmux curl zsh"
+    assert_success
+    assert_output --partial "git tmux curl zsh"
+}
+
 @test "brew_install_default_formulas skips upgrades when prefix is not writable and formulas are installed" {
     mkdir -p "$TEST_TEMP_DIR/homebrew"
     chmod 555 "$TEST_TEMP_DIR/homebrew"
