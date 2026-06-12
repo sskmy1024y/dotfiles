@@ -105,6 +105,11 @@ find_shell_scripts() {
     assert_success
 }
 
+@test "bootstrap script has valid syntax" {
+    run bash -n "$DOTPATH/etc/bootstrap"
+    assert_success
+}
+
 # Test header.sh syntax
 @test "header.sh has valid syntax" {
     run bash -n "$DOTPATH/etc/lib/header.sh"
@@ -168,6 +173,7 @@ find_shell_scripts() {
         "$DOTPATH/etc/scripts/deploy"
         "$DOTPATH/etc/scripts/init"
         "$DOTPATH/etc/setup"
+        "$DOTPATH/etc/bootstrap"
     )
     
     for script in "${scripts[@]}"; do
@@ -224,6 +230,7 @@ find_shell_scripts() {
         "$DOTPATH/etc/scripts/deploy"
         "$DOTPATH/etc/scripts/init"
         "$DOTPATH/etc/setup"
+        "$DOTPATH/etc/bootstrap"
         "$DOTPATH/test/install_bats.sh"
         "$DOTPATH/test/bats"
     )
@@ -283,6 +290,7 @@ find_shell_scripts() {
         "$DOTPATH/etc/scripts/deploy"
         "$DOTPATH/etc/scripts/init"
         "$DOTPATH/etc/setup"
+        "$DOTPATH/etc/bootstrap"
         "$DOTPATH/etc/lib/header.sh"
     )
     

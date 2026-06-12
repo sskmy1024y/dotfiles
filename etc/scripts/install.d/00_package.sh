@@ -13,6 +13,7 @@ fi
 
 # load lib script (functions)
 . "$DOTPATH"/etc/lib/header.sh
+. "$DOTPATH"/etc/lib/macos.sh
 
 
 echo ""
@@ -49,28 +50,22 @@ archlinux() {
 }
 
 darwin() {
-  PKG_OSX=""
-
-  info "xcode-select --install"
-  touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress;
-  PROD=$(softwareupdate -l |
-    grep "\*.*Command Line" |
-    head -n 1 | awk -F"*" '{print $2}' |
-    sed -e 's/^ *//' |
-    tr -d '\n')
-  softwareupdate -i "$PROD" --verbose;
-
-  # install brew
-  if ! hash brew 2> /dev/null; then
-    warn "Homebrew has not instaled yet"
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    brew upgrade
-    brew tap caskroom/cask
+  # Step 1: Xcode Command Line Tools (provides git/clang/make).
+  # Uses the non-interactive softwareupdate path — never spawns a GUI.
+  if ! ensure_xcode_clt; then
+    error "Cannot continue without Xcode Command Line Tools."
+    exit 1
   fi
 
+  # Step 2: Homebrew. Idempotent; also fixes PATH for the current shell.
+  if ! ensure_homebrew; then
+    error "Cannot continue without Homebrew."
+    exit 1
+  fi
+
+  # Step 3: default packages via brew.
   # shellcheck disable=SC2086
   brew install $PKG_DEFAULT
-  # brew install $PKG_OSX
 }
 
 android() {

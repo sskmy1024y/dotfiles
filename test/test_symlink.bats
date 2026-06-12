@@ -6,6 +6,14 @@ load test_helper
 
 setup() {
     setup_test_dir
+    mock_command "git" "
+if [[ \"\$1\" == \"clone\" && \"\$2\" == \"https://github.com/tmux-plugins/tpm\" ]]; then
+    mkdir -p \"\$3\"
+    touch \"\$3/.git\"
+    exit 0
+fi
+exit 127
+"
 }
 
 teardown() {

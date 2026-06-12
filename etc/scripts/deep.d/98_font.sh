@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
+#
+# 98_font.sh — Install the Cica programming font.
+#
+# Cica ships from upstream already merged with Nerd Fonts glyphs (and
+# optionally Noto Color Emoji), so we do NOT need fontforge / nerd-fonts /
+# font-patcher. We just download the latest release zip and drop its *.ttf
+# files into the OS font directory.
+#
+# Other Nerd Fonts (Meslo, JetBrains Mono, Hack, FiraCode, ...) are installed
+# via Homebrew casks from the Brewfile on macOS; this script handles only the
+# one font that isn't packaged for brew.
 
 # Author: takuzoo3868
-# Last Modified: 15 Feb 2021.
+# Last Modified: 06 Jun 2026.
 
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
@@ -16,45 +27,77 @@ fi
 # shellcheck disable=SC1091
 . "$DOTPATH"/etc/lib/header.sh
 
+echo ""
+info "98 Install Cica font (already Nerd-Font-patched upstream)"
+echo ""
 
-if is_exists "fontforge"; then
-  info "98 Install fonts..."
-else
-  error "fontforge required"
+# Pick OS-appropriate user font directory.
+case "$(detect_os)" in
+  darwin) fonts_dir="$HOME/Library/Fonts" ;;
+  ubuntu|archlinux|linux) fonts_dir="$HOME/.local/share/fonts" ;;
+  *) fonts_dir="$HOME/.fonts" ;;
+esac
+mkdir -p "$fonts_dir"
+
+# Stage downloads under a self-cleaning temp dir so we never leave partial
+# zips behind in $DOTPATH/tmp.
+tmp_dir="$(mktemp -d)"
+cleanup() { rm -rf "$tmp_dir"; }
+trap cleanup EXIT
+
+# Resolve the latest "with emoji" release zip. miiton/Cica ships two zips per
+# release; the default (no "_without_emoji" suffix) bundles Noto Color Emoji.
+# We use grep -v rather than grep "with_emoji" because the naming convention
+# changed in v5: the with-emoji build no longer has a suffix at all.
+if ! api_json=$(curl -fsSL https://api.github.com/repos/miiton/Cica/releases/latest); then
+  warn "Failed to query Cica releases from GitHub API (rate-limited?); skipping Cica install."
+  exit 0
+fi
+
+cica_url=$(printf '%s' "$api_json" \
+  | grep '"browser_download_url".*\.zip"' \
+  | grep -v "without_emoji" \
+  | head -n 1 \
+  | cut -d '"' -f 4)
+
+if [ -z "$cica_url" ]; then
+  warn "Could not resolve a Cica zip URL from GitHub API; skipping Cica install."
+  exit 0
+fi
+
+info "Downloading Cica from $cica_url"
+if ! curl -fsSL "$cica_url" -o "$tmp_dir/cica.zip"; then
+  warn "Cica download failed; skipping Cica install."
+  exit 0
+fi
+
+# `unzip` ships with macOS by default and is in the base install on most
+# Linux distros; if it ever isn't, surface that as a hard error so a real
+# install doesn't silently skip the font.
+if ! command -v unzip >/dev/null 2>&1; then
+  error "unzip not found; install it (e.g. 'apt install unzip') and retry."
   exit 1
 fi
 
-mkdir -p "$DOTPATH/tmp" && cd "$DOTPATH/tmp"
+unzip -q -o "$tmp_dir/cica.zip" -d "$tmp_dir/cica"
 
-# Download Nerd fonts
-nerd_url="https://github.com/ryanoasis/nerd-fonts.git"
-git clone --depth 1 "$nerd_url" && cd nerd-fonts && mkdir -p orig dist
+# Copy every .ttf the archive contains into the user font dir. -f overwrites
+# stale copies (e.g. upgrading from a previous version).
+found=0
+while IFS= read -r -d '' ttf; do
+  cp -f "$ttf" "$fonts_dir/"
+  found=$((found + 1))
+done < <(find "$tmp_dir/cica" -type f -name '*.ttf' -print0)
 
-# Download Cica fonts
-cica_url=$(curl -s https://api.github.com/repos/miiton/Cica/releases/latest | grep "browser_download_url.*zip" | grep "with_emoji" | cut -d '"' -f 4)
-curl -L "$cica_url" | tar -xvz -C orig
+if [ "$found" -eq 0 ]; then
+  warn "Cica zip contained no .ttf files (unexpected); leaving fonts untouched."
+  exit 0
+fi
 
-# Cica fonts repatched mapping
-find orig/ -type f -name "*.ttf" -print0 | while IFS= read -r -d '' font; do
-  fontforge -script font-patcher -c "$font" --out dist
-done
+# macOS: nudge the font registration daemon so apps pick up the new family
+# without requiring a logout. Best-effort only.
+if [ "$(detect_os)" = "darwin" ]; then
+  atsutil databases -remove >/dev/null 2>&1 || true
+fi
 
-# Rename whitespace to underscore
-find dist -type f -name "*.ttf" | while IFS= read -r org_name; do
-  new_name="${org_name// /_}"
-  mv "$org_name" "$new_name"
-done
-
-# Copy to font directory
-# Set fonts_dir based on OS
-case "$(detect_os)" in
-  darwin) fonts_dir="$HOME/Library/Fonts" ;;
-  linux) fonts_dir="$HOME/.local/share/fonts" ;;
-  *) fonts_dir="$HOME/.fonts" ;;
-esac
-
-mkdir -p "$fonts_dir"
-cp -u dist/* "$fonts_dir"
-
-cd "$DOTPATH"
-rm -rf tmp
+info "Installed ${found} Cica .ttf file(s) into ${fonts_dir}"

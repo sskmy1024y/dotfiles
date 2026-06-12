@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+# tart-run
+#
+# Run a scenario script against a fresh ephemeral macOS VM.
+#
+# Usage:
+#   ./tart-run <scenario>           # run scenarios/<scenario>.sh
+#   ./tart-run scenarios/01-*.sh    # explicit path
+#   ./tart-run --keep <scenario>    # don't auto-destroy on exit (for debugging)
+#   ./tart-run --shell              # spin up a VM and drop into ssh
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TART_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${TART_DIR}/../.." && pwd)"
+
+# shellcheck source=../lib/tart-helpers.sh
+source "${SCRIPT_DIR}/../lib/tart-helpers.sh"
+
+KEEP=false
+SHELL_MODE=false
+SCENARIO=""
+
+usage() {
+  cat <<EOF
+Usage: tart-run [--keep] [--shell] [scenario]
+
+Options:
+  --keep        Do not destroy the VM on exit. Print its name so you can
+                inspect/ssh into it.
+  --shell       Skip the scenario, just boot a clean VM and open an SSH shell.
+  -h, --help    Show this help.
+
+Examples:
+  tart-run 01-oneliner-remote
+  tart-run --keep 02-git-clone-local
+  tart-run --shell
+EOF
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --keep) KEEP=true; shift ;;
+    --shell) SHELL_MODE=true; shift ;;
+    -h|--help) usage; exit 0 ;;
+    --) shift; break ;;
+    -*)
+      error "Unknown flag: $1"; usage; exit 2 ;;
+    *) SCENARIO="$1"; shift ;;
+  esac
+done
+
+require_apple_silicon
+require_tools
+
+# Resolve scenario path (unless --shell).
+SCENARIO_PATH=""
+if [ "$SHELL_MODE" = false ]; then
+  if [ -z "$SCENARIO" ]; then
+    error "No scenario specified."
+    usage
+    exit 2
+  fi
+  if [ -f "$SCENARIO" ]; then
+    SCENARIO_PATH="$SCENARIO"
+  elif [ -f "${TART_DIR}/scenarios/${SCENARIO}" ]; then
+    SCENARIO_PATH="${TART_DIR}/scenarios/${SCENARIO}"
+  elif [ -f "${TART_DIR}/scenarios/${SCENARIO}.sh" ]; then
+    SCENARIO_PATH="${TART_DIR}/scenarios/${SCENARIO}.sh"
+  else
+    error "Scenario not found: ${SCENARIO}"
+    log "Looked in:"
+    log "  $SCENARIO"
+    log "  ${TART_DIR}/scenarios/${SCENARIO}"
+    log "  ${TART_DIR}/scenarios/${SCENARIO}.sh"
+    exit 1
+  fi
+fi
+
+# Snapshot a fresh VM.
+VM_NAME="$("${SCRIPT_DIR}/tart-snapshot")"
+info "Ephemeral VM: ${VM_NAME}"
+
+if [ "$KEEP" = false ]; then
+  vm_destroy_trap "$VM_NAME"
+else
+  warn "--keep set; VM '${VM_NAME}' will NOT be destroyed automatically."
+fi
+
+# Boot it headless.
+step "Starting VM '${VM_NAME}'..."
+BG_PID=$(vm_run_bg "$VM_NAME")
+log "tart run PID: ${BG_PID} (log: /tmp/tart-${VM_NAME}.log)"
+
+# Wait for SSH and capture IP.
+VM_IP="$(vm_wait_ssh "$VM_NAME")"
+
+# Resolve the VM's $HOME once, so scenarios don't have to embed a literal
+# '$HOME' (which is ambiguous: rsync treats it literally, but a remote
+# `bash -c 'cd $HOME/...'` expands it — leaving the two out of sync).
+# shellcheck disable=SC2016  # $HOME must expand on the VM, not the host.
+REMOTE_HOME="$(vm_exec "$VM_IP" 'printf %s "$HOME"')"
+if [ -z "$REMOTE_HOME" ]; then
+  error "Could not resolve VM's \$HOME via SSH."
+  exit 1
+fi
+log "Remote \$HOME: ${REMOTE_HOME}"
+
+# Enable passwordless sudo in the ephemeral VM so scenarios can run installers
+# that call `sudo -v`, `softwareupdate -i`, or the Homebrew bootstrap over a
+# non-interactive SSH channel (no TTY). This matches the Cirrus / GitHub
+# Actions macOS runner default and is destroyed with the VM.
+step "Enabling passwordless sudo in the test VM"
+if ! vm_enable_passwordless_sudo "$VM_IP"; then
+  error "Could not enable passwordless sudo in VM '${VM_NAME}'."
+  exit 1
+fi
+
+export VM_NAME VM_IP REPO_ROOT REMOTE_HOME
+export TART_SSH_USER TART_SSH_PASS
+
+# --shell mode: drop into interactive SSH and exit.
+if [ "$SHELL_MODE" = true ]; then
+  info "Opening SSH shell. Type 'exit' to leave."
+  log "VM name: ${VM_NAME}"
+  log "VM IP:   ${VM_IP}"
+  log "User:    ${TART_SSH_USER} / Pass: ${TART_SSH_PASS}"
+  sshpass -p "$TART_SSH_PASS" ssh \
+    -o StrictHostKeyChecking=no \
+    -o UserKnownHostsFile=/dev/null \
+    -o LogLevel=ERROR \
+    "${TART_SSH_USER}@${VM_IP}"
+  exit 0
+fi
+
+# Run the scenario.
+step "Running scenario: $(basename "$SCENARIO_PATH")"
+# Scenarios are sourced so they can use helper functions and env vars.
+had_errexit=false
+case "$-" in
+  *e*) had_errexit=true; set +e ;;
+esac
+# shellcheck source=/dev/null
+source "$SCENARIO_PATH"
+SCENARIO_RC=$?
+if [ "$had_errexit" = true ]; then
+  set -e
+fi
+
+if [ "$SCENARIO_RC" -eq 0 ]; then
+  info "Scenario PASSED"
+else
+  error "Scenario FAILED (exit ${SCENARIO_RC})"
+fi
+exit "$SCENARIO_RC"

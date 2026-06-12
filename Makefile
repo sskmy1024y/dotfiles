@@ -75,9 +75,35 @@ test-bats-ci: ## Run Bats tests in Docker CI mode (both OS)
 	@echo '==> Running Bats tests in Docker (CI mode)'
 	@cd $(DOTPATH)/test/docker && $(MAKE) bats-ci
 
-test-mac-local: ## Run tests in macOS Docker container
+test-mac-local: ## Run tests in macOS Docker container (fake macOS; smoke only)
 	@echo '==> Running tests in macOS Docker container'
 	@cd $(DOTPATH)/test/docker && $(MAKE) test-mac-local
+
+# ---------- Real macOS testing via Tart (Apple Silicon host required) ----------
+
+test-mac-tart-check: ## Verify Tart and its dependencies are installed
+	@cd $(DOTPATH)/test/tart && $(MAKE) check
+
+test-mac-tart-prepare: ## Pull vanilla macOS image and create base VM (first-time, 30-60 min)
+	@cd $(DOTPATH)/test/tart && $(MAKE) prepare
+
+test-mac-tart-oneliner: ## Tart scenario: curl one-liner against fresh macOS
+	@cd $(DOTPATH)/test/tart && $(MAKE) oneliner
+
+test-mac-tart-git: ## Tart scenario: local repo + make install on fresh macOS
+	@cd $(DOTPATH)/test/tart && $(MAKE) git-clone
+
+test-mac-tart-full: ## Tart scenario: full deploy + init + deep on fresh macOS
+	@cd $(DOTPATH)/test/tart && $(MAKE) full
+
+test-mac-tart-shell: ## Boot a fresh Tart VM and open an SSH shell (debug)
+	@cd $(DOTPATH)/test/tart && $(MAKE) shell
+
+test-mac-tart-clean: ## Destroy ephemeral Tart test VMs (keeps base)
+	@cd $(DOTPATH)/test/tart && $(MAKE) clean
+
+test-mac-tart-clean-all: ## Destroy all Tart VMs including the base
+	@cd $(DOTPATH)/test/tart && $(MAKE) clean-all
 
 help: ## Self-documented Makefile
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \

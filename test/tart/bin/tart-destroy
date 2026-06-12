@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# tart-destroy
+#
+# Clean up dangling test VMs. By default removes every VM whose name
+# starts with $TART_TEST_VM_PREFIX. The base VM is left alone unless
+# --all is passed.
+#
+# Usage:
+#   ./tart-destroy            # delete all ephemeral test VMs
+#   ./tart-destroy --all      # also delete the base VM
+#   ./tart-destroy <name>...  # delete specific named VMs
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/tart-helpers.sh
+source "${SCRIPT_DIR}/../lib/tart-helpers.sh"
+
+require_apple_silicon
+
+KILL_BASE=false
+EXPLICIT_NAMES=()
+
+for arg in "$@"; do
+  case "$arg" in
+    --all) KILL_BASE=true ;;
+    -h|--help)
+      cat <<EOF
+Usage: tart-destroy [--all] [<name>...]
+
+  --all       Also delete the base VM '${TART_BASE_VM}'.
+  <name>      Delete specific VMs by name.
+
+With no arguments, deletes every VM whose name starts with
+'${TART_TEST_VM_PREFIX}-'.
+EOF
+      exit 0
+      ;;
+    *) EXPLICIT_NAMES+=("$arg") ;;
+  esac
+done
+
+# Explicit names take precedence.
+if [ "${#EXPLICIT_NAMES[@]}" -gt 0 ]; then
+  for name in "${EXPLICIT_NAMES[@]}"; do
+    vm_destroy "$name"
+  done
+  exit 0
+fi
+
+# Collect VM names from `tart list`.
+# `tart list` columns: Source Name Disk Size State
+#
+# We avoid `mapfile`/`readarray` here because the system bash on macOS is 3.2
+# and doesn't ship either builtin. A while-read loop with explicit array push
+# is the portable equivalent.
+VMS=()
+while IFS= read -r line; do
+  [ -n "$line" ] && VMS+=("$line")
+done < <(tart list 2>/dev/null | awk 'NR>1 {print $2}' || true)
+
+count=0
+# Bash 3.2 + `set -u` treats `"${empty_array[@]}"` as an unbound expansion,
+# so guard the iteration on array size.
+if [ "${#VMS[@]}" -gt 0 ]; then
+  for name in "${VMS[@]}"; do
+    case "$name" in
+      "${TART_TEST_VM_PREFIX}-"*)
+        vm_destroy "$name"
+        count=$((count + 1))
+        ;;
+    esac
+  done
+fi
+
+if [ "$KILL_BASE" = true ] && vm_exists "$TART_BASE_VM"; then
+  vm_destroy "$TART_BASE_VM"
+  count=$((count + 1))
+fi
+
+if [ "$count" -eq 0 ]; then
+  info "Nothing to clean up."
+else
+  info "Removed ${count} VM(s)."
+fi

@@ -14,11 +14,7 @@ fi
 # load lib functions
 . "$DOTPATH"/etc/lib/header.sh
 
-
-
 ### Start install script
-DOTFILES_GITHUB="https://github.com/sskmy1024y/dotfiles.git"; export DOTFILES_GITHUB
-
 # shellcheck disable=SC1078,SC1079,SC2016
 dotfiles_logo='
       | |     | |  / _(_) |           
@@ -58,39 +54,6 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   exit 1
 fi
 
-_download() {
-  info "Downloading dotfiles..."
-
-  if [ ! -d "$DOTPATH" ]; then
-    if is_exists "git"; then
-      git clone "$DOTFILES_GITHUB" "$DOTPATH"
-      info "Downloaded"
-
-    elif is_exists "curl" || is_exists "wget"; then
-      local zip_url="https://github.com/sskmy1024y/dotfiles/archive/master.zip"
-
-      if is_exists "curl"; then
-        curl -L "$zip_url" | tar xvz
-      else
-        wget -O - "$zip_url" | tar xvz
-      fi
-      
-      if [ ! -d dotfiles-master ]; then
-        error "dotfiles-master: not found"
-        exit 1
-      fi
-      mv -f dotfiles-master "$DOTPATH"
-      info "Downloaded!"
-
-    else
-      error "curl or wget required"
-      exit 1
-    fi
-  else
-    warn "Dotfiles are already installed"
-  fi
-}
-
 _deploy() {
   info "Deploying dotfiles..."
   if [ ! -d "$DOTPATH" ]; then
@@ -123,7 +86,6 @@ _initialize() {
 }
 
 dotfiles_setup() {
-    _download &&
     _deploy &&
     _initialize "$@"
 }

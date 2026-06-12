@@ -51,7 +51,14 @@ darwin() {
   # Quicklookのプレビュー再生を続ける
   defaults write com.apple.finder AutoStopWhenSelectionChanges -bool false
   # すべてのアプリケーションを許可
-  sudo spctl --master-disable
+  # NOTE: `spctl --master-disable` was deprecated in macOS Sequoia (15.x). It
+  # now prints "Globally disabling the assessment system needs to be confirmed
+  # in System Settings." and exits non-zero, which would tear down `make deep`
+  # under `set -e`. Treat as best-effort: warn and continue.
+  if ! sudo spctl --master-disable 2>/dev/null; then
+    warn "spctl --master-disable failed (deprecated on macOS Sequoia+)."
+    warn "  Enable 'Anywhere' manually: System Settings → Privacy & Security → Security."
+  fi
 
   info "Initializing sudo via TouchID"
   "$DOTPATH"/bin/sudo-via-touch-id.sh

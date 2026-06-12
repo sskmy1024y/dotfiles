@@ -2,10 +2,20 @@
 
 # Test for deploy script functionality
 
+bats_require_minimum_version 1.5.0
+
 load test_helper
 
 setup() {
     setup_test_dir
+    mock_command "git" "
+if [[ \"\$1\" == \"clone\" && \"\$2\" == \"https://github.com/tmux-plugins/tpm\" ]]; then
+    mkdir -p \"\$3\"
+    touch \"\$3/.git\"
+    exit 0
+fi
+exit 127
+"
 }
 
 teardown() {
@@ -195,8 +205,7 @@ command ssh-keygen \"\$@\"
     export DOTPATH="/nonexistent/path"
     
     # Run deploy script (should fail)
-    run bash "$DOTPATH/etc/scripts/deploy" 2>/dev/null
-    [ "$status" -eq 127 ]
+    run -127 bash "$DOTPATH/etc/scripts/deploy"
 }
 
 # Test script output
