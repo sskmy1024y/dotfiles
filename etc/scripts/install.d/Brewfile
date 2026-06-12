@@ -1,12 +1,6 @@
 # Brewfile
 cask_args appdir: "/Applications"
 
-tap "homebrew/core"
-tap "homebrew/bundle"
-tap "homebrew/services"
-tap "homebrew/cask"
-tap "homebrew/cask-fonts"
-tap "homebrew/cask-versions"
 tap "buo/cask-upgrade"
 
 # third party repo
@@ -29,10 +23,10 @@ brew "tree"
 brew "go"
 brew "unzip"
 
-cask "google-cloud-sdk"
+cask "gcloud-cli"
 
 # cask apps
-cask "docker"
+cask "docker-desktop"
 
 # Nerd Fonts — pre-patched fonts installed via Homebrew Cask.
 # Cica (Japanese-aware, Nerd Font + emoji) is handled separately in

@@ -21,7 +21,9 @@
 #   /opt/homebrew; Intel macs use /usr/local.
 # ----------------------------------------------------------------------
 brew_prefix() {
-  if [ -x /opt/homebrew/bin/brew ]; then
+  if command -v brew >/dev/null 2>&1; then
+    brew --prefix
+  elif [ -x /opt/homebrew/bin/brew ]; then
     echo /opt/homebrew
   elif [ -x /usr/local/bin/brew ]; then
     echo /usr/local
@@ -44,6 +46,96 @@ brew_on_path() {
       *) export PATH="$prefix/bin:$PATH" ;;
     esac
   fi
+}
+
+# ----------------------------------------------------------------------
+# brew_formula_installed FORMULA
+#   Return 0 if the Homebrew formula is already installed.
+# ----------------------------------------------------------------------
+brew_formula_installed() {
+  [ "$#" -eq 1 ] || return 2
+  command -v brew >/dev/null 2>&1 || return 1
+  brew list --formula --versions "$1" >/dev/null 2>&1
+}
+
+# ----------------------------------------------------------------------
+# brew_prefix_writable
+#   Return 0 if the current user can write to the Homebrew directories
+#   commonly touched by formula installs/upgrades.
+# ----------------------------------------------------------------------
+brew_unwritable_paths() {
+  local prefix
+  prefix="$(brew_prefix)"
+  [ -n "$prefix" ] || return 0
+
+  local path
+  for path in \
+    "$prefix" \
+    "$prefix/etc" \
+    "$prefix/etc/bash_completion.d" \
+    "$prefix/lib" \
+    "$prefix/lib/pkgconfig" \
+    "$prefix/share" \
+    "$prefix/share/aclocal" \
+    "$prefix/share/doc" \
+    "$prefix/share/info" \
+    "$prefix/share/locale" \
+    "$prefix/share/man" \
+    "$prefix/share/man/man1" \
+    "$prefix/share/man/man3" \
+    "$prefix/share/man/man5" \
+    "$prefix/share/man/man7" \
+    "$prefix/share/zsh" \
+    "$prefix/share/zsh/site-functions" \
+    "$prefix/var" \
+    "$prefix/var/homebrew" \
+    "$prefix/var/homebrew/locks"; do
+    [ -e "$path" ] && [ ! -w "$path" ] && echo "$path"
+  done
+}
+
+brew_prefix_writable() {
+  [ -n "$(brew_prefix)" ] && [ -z "$(brew_unwritable_paths)" ]
+}
+
+# ----------------------------------------------------------------------
+# brew_install_default_formulas FORMULA...
+#   Install default formulas, allowing Homebrew to upgrade installed but
+#   outdated formulas when the prefix is writable. If the prefix is not
+#   writable and all requested formulas already exist, warn and skip the
+#   upgrade instead of failing the whole bootstrap.
+# ----------------------------------------------------------------------
+brew_install_default_formulas() {
+  command -v brew >/dev/null 2>&1 || {
+    error "brew: command not found"
+    return 1
+  }
+
+  local missing=()
+  local formula
+  for formula in "$@"; do
+    if ! brew_formula_installed "$formula"; then
+      missing+=("$formula")
+    fi
+  done
+
+  local unwritable_paths
+  unwritable_paths="$(brew_unwritable_paths)"
+  if [ -n "$unwritable_paths" ]; then
+    if [ "${#missing[@]}" -eq 0 ]; then
+      warn "brew: all default packages are installed, but Homebrew has unwritable directories; skip upgrades"
+      warn "brew: fix ownership later if you want upgrades to run during init:"
+      printf "%s\n" "$unwritable_paths" | sed 's/^/  /'
+      return 0
+    fi
+
+    error "brew: Homebrew has unwritable directories and missing packages must be installed: ${missing[*]}"
+    printf "%s\n" "$unwritable_paths" | sed 's/^/  /'
+    error "brew: fix these paths, then rerun make init"
+    return 1
+  fi
+
+  brew install "$@"
 }
 
 # ----------------------------------------------------------------------

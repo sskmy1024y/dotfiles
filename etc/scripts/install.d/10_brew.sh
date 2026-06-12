@@ -36,6 +36,23 @@ brewery() {
   if [ ! -f Brewfile ]; then
     error "Brewfile: not found"
   else
+    local unwritable_paths
+    unwritable_paths="$(brew_unwritable_paths)"
+    if [ -n "$unwritable_paths" ]; then
+      if brew bundle check --file Brewfile >/dev/null 2>&1; then
+        warn "brew: Brewfile dependencies are already installed, but Homebrew has unwritable directories; skip bundle upgrades"
+        warn "brew: fix ownership later if you want brew bundle to upgrade during init:"
+        printf "%s\n" "$unwritable_paths" | sed 's/^/  /'
+      else
+        error "brew: Homebrew has unwritable directories and Brewfile dependencies are missing"
+        printf "%s\n" "$unwritable_paths" | sed 's/^/  /'
+        error "brew: fix these paths, then rerun make init"
+        return 1
+      fi
+      builtin cd "$DOTPATH"
+      return 0
+    fi
+
     brew bundle
     info "brew: tapped successfully."
   fi

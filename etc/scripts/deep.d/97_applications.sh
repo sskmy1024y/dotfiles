@@ -53,9 +53,6 @@ darwin() {
   info "VS Code.app"
   brew install --cask "visual-studio-code"
 
-  info "InteliJ.app"
-  brew install --cask "intellij-idea"
-
   info "Figma.app"
   brew install --cask "figma"
 
@@ -64,6 +61,9 @@ darwin() {
 
   info "AltTab.app"
   brew install --cask alt-tab
+
+  info "Codex.app"
+  brew install --cask codex
 }
 
 android() {
