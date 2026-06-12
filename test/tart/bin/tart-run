@@ -137,9 +137,16 @@ fi
 # Run the scenario.
 step "Running scenario: $(basename "$SCENARIO_PATH")"
 # Scenarios are sourced so they can use helper functions and env vars.
+had_errexit=false
+case "$-" in
+  *e*) had_errexit=true; set +e ;;
+esac
 # shellcheck source=/dev/null
 source "$SCENARIO_PATH"
 SCENARIO_RC=$?
+if [ "$had_errexit" = true ]; then
+  set -e
+fi
 
 if [ "$SCENARIO_RC" -eq 0 ]; then
   info "Scenario PASSED"

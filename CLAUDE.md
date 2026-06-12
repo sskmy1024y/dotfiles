@@ -16,12 +16,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Installation Methods
 1. **One-liner remote install:**
    ```bash
-   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/setup)"
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)"
    ```
 
 2. **With package installation:**
    ```bash
-   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/setup)" -s init
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)" -s init
    ```
 
 3. **Manual clone and install:**
@@ -60,7 +60,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. `deploy` creates symlinks. **TPM (tmux plugin manager) clone is deferred** here if `git` is missing — it runs later from `install.d/30_tmux.sh` after git is installed via brew.
 2. `init` runs `install.d/*.sh` in numeric order. On macOS this means `00_package.sh` ensures Xcode CLT + brew + core packages, `10_brew.sh` applies the `Brewfile`, then `30_tmux.sh` clones TPM.
 
-The one-liner `etc/setup` downloads the GitHub **tarball** (`master.tar.gz`) — NOT the zip — so it can be piped straight into `tar xz` without needing `unzip` on a fresh macOS.
+The one-liner `etc/bootstrap` downloads the GitHub **tarball** (`master.tar.gz`) — NOT the zip — so it can be piped straight into `tar xz` without needing `unzip` on a fresh macOS. After the repository is present, it delegates to `etc/setup`.
 
 ### `make deep` notes (macOS)
 - `make deep` runs `etc/scripts/deep.d/*.sh` via `find | sort | bash`. Bash reads each filename from stdin as a command; non-zero exit from an early script does **not** stop later scripts, but the LAST script's exit code is what `make` sees.

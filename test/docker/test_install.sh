@@ -57,9 +57,11 @@ assert_symlink() {
 # Test remote installation
 test_remote_install() {
     info "Testing remote installation..."
+    local bootstrap_url="${DOTFILES_BOOTSTRAP_URL:-https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap}"
+    info "Bootstrap URL: $bootstrap_url"
     
     # Download and run setup script
-    if bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/setup)" <<< "y"; then
+    if bash -c "$(curl -fsSL "$bootstrap_url")" <<< "y"; then
         info "Remote installation completed"
     else
         error "Remote installation failed"

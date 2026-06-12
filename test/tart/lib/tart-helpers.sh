@@ -211,7 +211,7 @@ fi
 # entry for this user requires authentication. If this fails we MUST
 # fail loudly here, before the scenario hangs waiting for a TTY.
 if ! sudo -n -v 2>/dev/null; then
-  echo '[-] passwordless sudo did NOT take effect for \`sudo -v\`; diagnostics:' >&2
+  echo '[-] passwordless sudo did NOT take effect for sudo -v; diagnostics:' >&2
   ls -l /etc/sudoers.d/ >&2 || true
   sudo -n cat /etc/sudoers.d/dotfiles-test >&2 2>&1 || true
   exit 1

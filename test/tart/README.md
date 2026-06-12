@@ -159,12 +159,12 @@ All overridable via environment variables before invoking `make`:
 | `TART_TEST_VM_PREFIX` | `dotfiles-test` | Ephemeral VMs get `<prefix>-<timestamp>-<pid>` |
 | `TART_SSH_USER` / `TART_SSH_PASS` | `admin` / `admin` | Cirrus vanilla image defaults |
 | `TART_SSH_TIMEOUT` | `300` | Seconds to wait for VM SSH on first boot |
-| `ONELINER_URL` | `https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/setup` | Override to test a fork/branch |
+| `ONELINER_URL` | `https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap` | Override to test a fork/branch |
 
 Example:
 
 ```sh
-ONELINER_URL=https://raw.githubusercontent.com/sskmy1024y/dotfiles/feat/fix-install/etc/setup \
+ONELINER_URL=https://raw.githubusercontent.com/sskmy1024y/dotfiles/refs/heads/feat/fix-install/etc/bootstrap \
   make test-mac-tart-oneliner
 ```
 

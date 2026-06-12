@@ -3,7 +3,7 @@
 #
 # Reproduces the install method documented in README:
 #
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/setup)"
+#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)"
 #
 # This is the WORST-CASE entrypoint: a brand-new macOS user types this and
 # expects everything to bootstrap. Currently expected to fail until the
@@ -17,13 +17,22 @@
 # shellcheck disable=SC2317
 set -uo pipefail
 
-ONELINER_URL="${ONELINER_URL:-https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/setup}"
+if [ -z "${ONELINER_URL:-}" ]; then
+  branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  if [ -n "$branch" ] && [ "$branch" != "HEAD" ]; then
+    ONELINER_URL="https://raw.githubusercontent.com/sskmy1024y/dotfiles/refs/heads/${branch}/etc/bootstrap"
+  else
+    ONELINER_URL="https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap"
+  fi
+fi
+DOTFILES_BRANCH="${DOTFILES_BRANCH:-${branch:-master}}"
 
 step "Scenario 01: remote curl one-liner"
 log "URL: ${ONELINER_URL}"
+log "Branch: ${DOTFILES_BRANCH}"
 
 # Run the one-liner exactly as a user would.
-vm_exec "$VM_IP" bash -c "'set -x; bash -c \"\$(curl -fsSL ${ONELINER_URL})\"'"
+vm_exec "$VM_IP" bash -c "'set -x; DOTFILES_BRANCH=\"${DOTFILES_BRANCH}\" bash -c \"\$(curl -fsSL ${ONELINER_URL})\"'"
 rc=$?
 if [ "$rc" -ne 0 ]; then
   error "Remote one-liner exited with ${rc}"

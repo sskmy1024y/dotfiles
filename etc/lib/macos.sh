@@ -92,9 +92,8 @@ ensure_xcode_clt() {
     | sort -V \
     | tail -n 1)"
 
-  rm -f "$flag"
-
   if [ -z "$product" ]; then
+    rm -f "$flag"
     error "softwareupdate did not list a Command Line Tools product."
     error "Manual fallback: run 'xcode-select --install' once interactively."
     return 1
@@ -106,10 +105,12 @@ ensure_xcode_clt() {
   # already-cached sudo timestamp; either way, prompting here would hang a
   # non-interactive install.
   if ! sudo -n softwareupdate -i "$product" --verbose; then
+    rm -f "$flag"
     error "softwareupdate failed to install '${product}'"
     error "Hint: ensure passwordless sudo is configured or run 'sudo -v' first."
     return 1
   fi
+  rm -f "$flag"
 
   if ! xcode_clt_installed; then
     error "Command Line Tools install reported success but tools not usable"

@@ -110,6 +110,7 @@ run_bats_test() {
 run_all_tests() {
     local test_files=(
         "test_header.bats:Unit Tests - Header Functions"
+        "test_bootstrap.bats:Unit Tests - Bootstrap"
         "test_symlink.bats:Integration Tests - Symlinks"
         "test_deploy.bats:Integration Tests - Deploy Script"
         "test_syntax.bats:Code Quality - Syntax & Linting"
