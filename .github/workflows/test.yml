@@ -163,6 +163,7 @@ jobs:
           setup_repo="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
           setup_ref="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
           docker run --rm \
+            -e CI=true \
             -e DOTFILES_BOOTSTRAP_URL="https://raw.githubusercontent.com/${setup_repo}/refs/heads/${setup_ref}/etc/bootstrap" \
             -e DOTFILES_GITHUB="https://github.com/${setup_repo}.git" \
             -e DOTFILES_BRANCH="${setup_ref}" \

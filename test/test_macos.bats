@@ -26,7 +26,7 @@ teardown() {
     assert_success
     case "$output" in
         ""|/opt/homebrew|/usr/local)
-            assert_success
+            :
             ;;
         *)
             fail "brew_prefix returned unexpected value: $output"
@@ -67,7 +67,7 @@ teardown() {
 
     brew_on_path
     case ":$PATH:" in
-        *":$prefix/bin:"*) assert_success ;;
+        *":$prefix/bin:"*) : ;;
         *) fail "brew_on_path did not put $prefix/bin on PATH" ;;
     esac
 }
