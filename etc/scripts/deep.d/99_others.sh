@@ -37,10 +37,6 @@ darwin() {
   defaults write com.apple.dock tilesize -integer 46
   defaults write com.apple.dock size-immutable -boolean true
 
-  info "Initializing Launchpad layout"
-  defaults write com.apple.dock springboard-columns -int 7
-  defaults write com.apple.dock springboard-rows -int 6
-
   info "Initializing Finder"
   # ネットワークディスクに.DS_Storeを作らない
   defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true

@@ -19,21 +19,44 @@ echo ""
 info "22 Install Python"
 echo ""
 
+PYTHON_VERSION="3.14.6"
+
+anyenv_on_path() {
+  if [ -d "$HOME/.anyenv/bin" ]; then
+    export PATH="$HOME/.anyenv/bin:$PATH"
+  fi
+
+  local env_dir
+  for env_dir in "$HOME"/.anyenv/envs/*; do
+    [ -d "$env_dir" ] || continue
+    [ -d "$env_dir/bin" ] && export PATH="$env_dir/bin:$PATH"
+    [ -d "$env_dir/shims" ] && export PATH="$env_dir/shims:$PATH"
+  done
+
+  if [ -d "$HOME/.anyenv/envs/pyenv" ]; then
+    export PYENV_ROOT="$HOME/.anyenv/envs/pyenv"
+  fi
+  return 0
+}
+
+anyenv_on_path
+
 # install python
 install_python(){
   if is_exists "pyenv"; then
-    if [ ! -d "$HOME/.anyenv/envs/pyenv/versions/2.7.18" ]; then
-      pyenv install 2.7.15
+    if [ ! -d "$HOME/.anyenv/envs/pyenv/versions/$PYTHON_VERSION" ]; then
+      pyenv install "$PYTHON_VERSION"
     fi
-    if [ ! -d "$HOME/.anyenv/envs/pyenv/versions/3.9.1" ]; then
-      pyenv install 3.9.1
-      pyenv global 3.9.1
-    fi
-    info "Installed python 2.7 & 3.7"
-    exec $SHELL -l
+    pyenv global "$PYTHON_VERSION"
+    info "Installed python $PYTHON_VERSION"
   else
     warn "pyenv not found. installing..."
-    install_anyenv
+    bash "$DOTPATH"/etc/scripts/install.d/20_anyenv.sh
+    anyenv_on_path
+    if ! is_exists "pyenv"; then
+      error "pyenv is not available after anyenv install"
+      return 1
+    fi
     install_python
   fi
 }

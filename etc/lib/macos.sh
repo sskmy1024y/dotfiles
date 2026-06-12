@@ -92,6 +92,7 @@ brew_unwritable_paths() {
     "$prefix/var/homebrew/locks"; do
     [ -e "$path" ] && [ ! -w "$path" ] && echo "$path"
   done
+  return 0
 }
 
 brew_prefix_writable() {

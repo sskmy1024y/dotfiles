@@ -16,25 +16,44 @@ LOCALRC=$HOME/.zsh/11_local_environment.zsh
 . "$DOTPATH"/etc/lib/header.sh
 
 
+clone_or_skip() {
+  local repo="$1"
+  local dest="$2"
+
+  if [ -d "$dest/.git" ]; then
+    info "$(basename "$dest") is already installed"
+  elif [ -e "$dest" ]; then
+    warn "$dest already exists; skip clone"
+  else
+    git clone "$repo" "$dest"
+  fi
+}
+
 install_anyenv() {
   echo ""
   info "20 Install any environment managers"
   echo ""
 
+  if [ -d "$HOME/.anyenv/bin" ]; then
+    export PATH="$HOME/.anyenv/bin:$PATH"
+  fi
+
   if is_exists "anyenv"; then
     info "anyenv is already installed"
   else
     warn "anyenv has not installed yet"
-    if [ ! -d "$HOME/.anyenv" ]; then
-      git clone https://github.com/anyenv/anyenv.git "$HOME"/.anyenv
-    fi
+    clone_or_skip https://github.com/anyenv/anyenv.git "$HOME"/.anyenv
+    export PATH="$HOME/.anyenv/bin:$PATH"
 
     # plugins
     mkdir -p "$HOME"/.anyenv/plugins
-    git clone https://github.com/znz/anyenv-update.git "$HOME"/.anyenv/plugins/anyenv-update
-    git clone https://github.com/znz/anyenv-git.git "$HOME"/.anyenv/plugins/anyenv-git
+    clone_or_skip https://github.com/znz/anyenv-update.git "$HOME"/.anyenv/plugins/anyenv-update
+    clone_or_skip https://github.com/znz/anyenv-git.git "$HOME"/.anyenv/plugins/anyenv-git
 
-    source ~/.zshrc
+    if ! is_exists "anyenv"; then
+      error "anyenv command is not available after install"
+      return 1
+    fi
   fi
 
   # check exist local bashrc
@@ -46,7 +65,7 @@ install_anyenv() {
     info "anyenv: export PATH is ok"
   else
     warn "anyenv: not export PATH..."
-    tee -a "$LOCALRC" <<EOF
+    tee -a "$LOCALRC" <<'EOF'
 
 ### anyenv
 if [ -d "$HOME"/.anyenv ] ; then
@@ -63,13 +82,25 @@ EOF
     # exec $SHELL -l
   fi
 
-  "$HOME"/.anyenv/bin/anyenv init
-  # Note: exec will replace the current shell and stop script execution
-  # exec $SHELL -l
-  anyenv install --init
+  if [ -d "${XDG_CONFIG_HOME:-$HOME/.config}/anyenv/anyenv-install" ]; then
+    info "anyenv install definitions are already initialized"
+  else
+    anyenv install --force-init
+  fi
+  if [ ! -d "${XDG_CONFIG_HOME:-$HOME/.config}/anyenv/anyenv-install" ]; then
+    error "anyenv install definitions were not initialized"
+    return 1
+  fi
+  if ! anyenv init - bash >/dev/null 2>&1; then
+    warn "anyenv init emitted setup guidance; continuing"
+  fi
 
   for l in goenv pyenv jenv rbenv nodenv; do
-    anyenv install $l
+    if [ -d "$HOME/.anyenv/envs/$l" ]; then
+      info "$l is already installed"
+    else
+      anyenv install "$l"
+    fi
   done
   info "Installed go, python, java, ruby and node environment"
 }
