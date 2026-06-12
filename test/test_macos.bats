@@ -81,6 +81,112 @@ teardown() {
     assert_equal "$PATH" "$once"
 }
 
+# ---- brew_install_default_formulas ----------------------------------
+
+@test "brew_install_default_formulas installs requested formulas when brew prefix is writable" {
+    mkdir -p "$TEST_TEMP_DIR/homebrew"
+    mock_command "brew" '
+if [ "$1" = "--prefix" ]; then
+    echo "$TEST_TEMP_DIR/homebrew"
+    exit 0
+fi
+if [ "$1" = "list" ] && [ "$2" = "--formula" ] && [ "$3" = "--versions" ]; then
+    case "$4" in
+        git|tmux|curl|zsh) echo "$4 1.0"; exit 0 ;;
+    esac
+fi
+if [ "$1" = "install" ]; then
+    shift
+    printf "%s\n" "$*"
+    exit 0
+fi
+exit 1
+'
+
+    run brew_install_default_formulas git tmux curl zsh
+    assert_success
+    assert_output --partial "git tmux curl zsh"
+}
+
+@test "brew_install_default_formulas skips upgrades when prefix is not writable and formulas are installed" {
+    mkdir -p "$TEST_TEMP_DIR/homebrew"
+    chmod 555 "$TEST_TEMP_DIR/homebrew"
+    mock_command "brew" '
+if [ "$1" = "--prefix" ]; then
+    echo "$TEST_TEMP_DIR/homebrew"
+    exit 0
+fi
+if [ "$1" = "list" ] && [ "$2" = "--formula" ] && [ "$3" = "--versions" ]; then
+    case "$4" in
+        git|tmux|curl|zsh) echo "$4 1.0"; exit 0 ;;
+    esac
+fi
+if [ "$1" = "install" ]; then
+    echo "unexpected install: $*" >&2
+    exit 42
+fi
+exit 1
+'
+
+    run brew_install_default_formulas git tmux curl zsh
+    assert_success
+    assert_output --partial "all default packages are installed"
+    assert_output --partial "skip upgrades"
+}
+
+@test "brew_install_default_formulas detects unwritable Homebrew subdirectories" {
+    mkdir -p "$TEST_TEMP_DIR/homebrew/var/homebrew/locks"
+    chmod 555 "$TEST_TEMP_DIR/homebrew/var/homebrew/locks"
+    mock_command "brew" '
+if [ "$1" = "--prefix" ]; then
+    echo "$TEST_TEMP_DIR/homebrew"
+    exit 0
+fi
+if [ "$1" = "list" ] && [ "$2" = "--formula" ] && [ "$3" = "--versions" ]; then
+    case "$4" in
+        git|tmux|curl|zsh) echo "$4 1.0"; exit 0 ;;
+    esac
+fi
+if [ "$1" = "install" ]; then
+    echo "unexpected install: $*" >&2
+    exit 42
+fi
+exit 1
+'
+
+    run brew_install_default_formulas git tmux curl zsh
+    assert_success
+    assert_output --partial "$TEST_TEMP_DIR/homebrew/var/homebrew/locks"
+    assert_output --partial "skip upgrades"
+}
+
+@test "brew_install_default_formulas fails when prefix is not writable and formulas are missing" {
+    mkdir -p "$TEST_TEMP_DIR/homebrew"
+    chmod 555 "$TEST_TEMP_DIR/homebrew"
+    mock_command "brew" '
+if [ "$1" = "--prefix" ]; then
+    echo "$TEST_TEMP_DIR/homebrew"
+    exit 0
+fi
+if [ "$1" = "list" ] && [ "$2" = "--formula" ] && [ "$3" = "--versions" ]; then
+    case "$4" in
+        git|tmux|curl) echo "$4 1.0"; exit 0 ;;
+        zsh) exit 1 ;;
+    esac
+fi
+if [ "$1" = "install" ]; then
+    echo "unexpected install: $*" >&2
+    exit 42
+fi
+exit 1
+'
+
+    run brew_install_default_formulas git tmux curl zsh
+    assert_failure
+    assert_output --partial "unwritable directories"
+    assert_output --partial "zsh"
+}
+
 # ---- xcode_clt_installed --------------------------------------------
 
 @test "xcode_clt_installed returns 0 on macOS with CLT" {
@@ -136,7 +242,7 @@ teardown() {
 }
 
 @test "macos.sh defines all expected functions" {
-    for fn in brew_prefix brew_on_path xcode_clt_installed ensure_xcode_clt ensure_homebrew; do
+    for fn in brew_prefix brew_on_path brew_formula_installed brew_prefix_writable brew_install_default_formulas xcode_clt_installed ensure_xcode_clt ensure_homebrew; do
         run type -t "$fn"
         assert_success
         assert_output "function"

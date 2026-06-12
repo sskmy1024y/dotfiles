@@ -111,6 +111,7 @@ run_all_tests() {
     local test_files=(
         "test_header.bats:Unit Tests - Header Functions"
         "test_bootstrap.bats:Unit Tests - Bootstrap"
+        "test_macos.bats:Unit Tests - macOS Helpers"
         "test_symlink.bats:Integration Tests - Symlinks"
         "test_deploy.bats:Integration Tests - Deploy Script"
         "test_syntax.bats:Code Quality - Syntax & Linting"
@@ -181,6 +182,9 @@ test_individual() {
         symlink)
             run_bats_test "Symlink Tests" "$TEST_DIR/test_symlink.bats"
             ;;
+        macos)
+            run_bats_test "macOS Helper Tests" "$TEST_DIR/test_macos.bats"
+            ;;
         deploy)
             run_bats_test "Deploy Script Tests" "$TEST_DIR/test_deploy.bats"
             ;;
@@ -200,7 +204,7 @@ test_individual() {
             ;;
         *)
             echo -e "${RED}Error: Unknown test: $test${NC}"
-            echo "Available tests: header, symlink, deploy, syntax"
+            echo "Available tests: header, symlink, macos, deploy, syntax"
             echo "Or specify a .bats file directly"
             exit 1
             ;;
@@ -237,6 +241,7 @@ usage() {
     echo "Tests:"
     echo "  header         Run header.sh function tests"
     echo "  symlink        Run symlink functionality tests"
+    echo "  macos          Run macOS helper tests"
     echo "  deploy         Run deploy script tests"
     echo "  syntax         Run syntax and linting tests"
     echo ""

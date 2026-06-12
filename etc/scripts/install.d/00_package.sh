@@ -63,9 +63,10 @@ darwin() {
     exit 1
   fi
 
-  # Step 3: default packages via brew.
+  # Step 3: default packages via brew. Existing outdated formulas may be
+  # upgraded when the Homebrew prefix is writable.
   # shellcheck disable=SC2086
-  brew install $PKG_DEFAULT
+  brew_install_default_formulas $PKG_DEFAULT
 }
 
 android() {
