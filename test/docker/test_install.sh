@@ -75,8 +75,9 @@ run_bats_tests() {
     
     cd "$HOME/.dotfiles"
     
-    # Install Bats if needed
-    if [ ! -x "test/bats-runner" ]; then
+    # Install Bats if needed. The repository tracks the wrapper, but the
+    # ignored test/bats dependencies are absent after a fresh clone/archive.
+    if [ ! -x "test/bats/bats-core/bin/bats" ]; then
         info "Installing Bats..."
         if [ -f "test/install_bats.sh" ]; then
             bash test/install_bats.sh

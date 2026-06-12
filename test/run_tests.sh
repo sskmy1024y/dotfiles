@@ -42,7 +42,7 @@ print_header() {
 
 # Install Bats if needed
 install_bats_if_needed() {
-    if [ ! -x "$BATS_BIN" ]; then
+    if [ ! -x "$TEST_DIR/bats/bats-core/bin/bats" ]; then
         echo -e "${YELLOW}Bats not found. Installing...${NC}"
         if [ -x "$TEST_DIR/install_bats.sh" ]; then
             bash "$TEST_DIR/install_bats.sh"
