@@ -53,15 +53,11 @@ teardown() {
     fi
     
     # Create test environment
-    export HOME="$TEST_TEMP_DIR/home"
+    mkdir -p "$TEST_TEMP_DIR/home"
+    ln -s "$DOTPATH" "$TEST_TEMP_DIR/home/.dotfiles"
     
     # Test if deploy script sets DOTPATH when missing
-    (
-        unset DOTPATH
-        # Source the script and check if it sets DOTPATH
-        source "$deploy_script" >/dev/null 2>&1 || true
-        [ -n "${DOTPATH:-}" ]
-    )
+    run env -u DOTPATH HOME="$TEST_TEMP_DIR/home" bash -c "source '$deploy_script' >/dev/null 2>&1 || true; [ \"\${DOTPATH:-}\" = \"\$HOME/.dotfiles\" ]"
     
     assert_success
 }
@@ -172,29 +168,25 @@ command git \"\$@\"
     assert_file_exists "$HOME/.tmux/plugins/tpm/.git"
 }
 
-# Test SSH key generation
-@test "deploy script generates SSH keys if missing" {
+# Test SSH key handling
+@test "deploy script does not generate SSH keys" {
     # Setup test environment
     export HOME="$TEST_TEMP_DIR/home"
     mkdir -p "$HOME"
     
-    # Mock ssh-keygen command
+    # ssh keys are managed by 1Password. deploy must not generate local keys.
     mock_command "ssh-keygen" "
-if [[ \"\$1\" == \"-q\" && \"\$2\" == \"-f\" && \"\$4\" == \"-N\" && \"\$5\" == \"\" ]]; then
-    touch \"\$3\"
-    touch \"\$3.pub\"
-    exit 0
-fi
-command ssh-keygen \"\$@\"
+echo \"ssh-keygen should not be called\" >&2
+exit 42
 "
     
     # Run deploy script
     run bash "$DOTPATH/etc/scripts/deploy"
+    assert_success
     
-    # Check if SSH keys were generated
-    if [ -f "$HOME/.ssh/git_private" ] || [ -f "$HOME/.ssh/git_public" ]; then
-        assert_success
-    fi
+    # Check that deploy did not create managed SSH key files.
+    assert_not_exists "$HOME/.ssh/git_private"
+    assert_not_exists "$HOME/.ssh/git_public"
 }
 
 # Test error handling
