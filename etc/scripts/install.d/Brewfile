@@ -23,7 +23,7 @@ brew "tree"
 brew "go"
 brew "unzip"
 
-brew "1password-cli"
+cask "1password-cli"
 cask "gcloud-cli"
 
 # cask apps
