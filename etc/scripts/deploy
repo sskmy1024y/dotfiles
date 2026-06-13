@@ -59,14 +59,6 @@ if [ ! -f "$HOME/.ssh/authorized_keys" ]; then
 fi
 symlink "$CONFPATH/ssh/config" "$HOME/.ssh/config"
 symlink "$CONFPATH/ssh/git.conf" "$HOME/.ssh/git.conf"
-if [ ! -f "$HOME/.ssh/git_private" ]; then
-  # Use empty passphrase for CI/test environments
-  passphrase=""
-  [ -z "${CI:-}" ] && [ -z "${DOTFILES_TEST:-}" ] && passphrase="-"
-  
-  ssh-keygen -q -f "$HOME"/.ssh/git_private -N "$passphrase"
-  mv "$HOME"/.ssh/git_private.pub "$HOME"/.ssh/git_public
-fi
 
 # git
 deploy_config "git"
