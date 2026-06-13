@@ -1,1 +1,5 @@
 Include ~/.ssh/*.conf
+
+Host *
+  SendEnv TERM
+  SetEnv TERM=xterm-256color
