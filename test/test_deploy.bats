@@ -169,9 +169,10 @@ command git \"\$@\"
 }
 
 # Test SSH key handling
-@test "deploy script does not generate SSH keys" {
+@test "deploy script does not generate SSH keys on macOS" {
     # Setup test environment
     export HOME="$TEST_TEMP_DIR/home"
+    export DOTFILES_OS_OVERRIDE="darwin"
     mkdir -p "$HOME"
     
     # ssh keys are managed by 1Password. deploy must not generate local keys.
@@ -187,6 +188,34 @@ exit 42
     # Check that deploy did not create managed SSH key files.
     assert_not_exists "$HOME/.ssh/git_private"
     assert_not_exists "$HOME/.ssh/git_public"
+    assert_symlink_to "$DOTPATH/config/ssh/1password.conf" "$HOME/.ssh/git.conf"
+}
+
+@test "deploy script generates SSH keys outside macOS" {
+    # Setup test environment
+    export HOME="$TEST_TEMP_DIR/home"
+    export DOTFILES_OS_OVERRIDE="ubuntu"
+    mkdir -p "$HOME"
+
+    # Mock ssh-keygen command
+    mock_command "ssh-keygen" "
+if [[ \"\$1\" == \"-q\" && \"\$2\" == \"-f\" ]]; then
+    touch \"\$3\"
+    touch \"\$3.pub\"
+    exit 0
+fi
+echo \"unexpected ssh-keygen args: \$*\" >&2
+exit 42
+"
+
+    # Run deploy script
+    run bash "$DOTPATH/etc/scripts/deploy"
+    assert_success
+
+    # Check if SSH keys were generated for non-macOS environments.
+    assert_file_exists "$HOME/.ssh/git_private"
+    assert_file_exists "$HOME/.ssh/git_public"
+    assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
 }
 
 # Test error handling
@@ -235,7 +264,11 @@ exit 42
     
     if [ -e "$HOME/.ssh/git.conf" ]; then
         assert_link_exists "$HOME/.ssh/git.conf"
-        assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
+        if [ "$(detect_os)" = "darwin" ]; then
+            assert_symlink_to "$DOTPATH/config/ssh/1password.conf" "$HOME/.ssh/git.conf"
+        else
+            assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
+        fi
     fi
 }
 

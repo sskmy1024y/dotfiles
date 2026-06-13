@@ -52,13 +52,26 @@ wild_symlink "$CONFPATH/zsh/*.zsh" "$HOME/.zsh/"
 
 # ssh
 deploy_config "ssh"
+os="${DOTFILES_OS_OVERRIDE:-$(detect_os)}"
 ensure_dir "$HOME/.ssh" "700"
 if [ ! -f "$HOME/.ssh/authorized_keys" ]; then
   touch "$HOME"/.ssh/authorized_keys
   chmod 600 "$HOME"/.ssh/authorized_keys
 fi
 symlink "$CONFPATH/ssh/config" "$HOME/.ssh/config"
-symlink "$CONFPATH/ssh/git.conf" "$HOME/.ssh/git.conf"
+if [ "$os" = "darwin" ]; then
+  symlink "$CONFPATH/ssh/1password.conf" "$HOME/.ssh/git.conf"
+else
+  symlink "$CONFPATH/ssh/git.conf" "$HOME/.ssh/git.conf"
+  if [ ! -f "$HOME/.ssh/git_private" ]; then
+    # Use empty passphrase for CI/test environments
+    passphrase=""
+    [ -z "${CI:-}" ] && [ -z "${DOTFILES_TEST:-}" ] && passphrase="-"
+
+    ssh-keygen -q -f "$HOME"/.ssh/git_private -N "$passphrase"
+    mv "$HOME"/.ssh/git_private.pub "$HOME"/.ssh/git_public
+  fi
+fi
 
 # git
 deploy_config "git"
