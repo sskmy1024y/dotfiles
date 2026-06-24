@@ -38,6 +38,7 @@ zinit light zsh-users/zsh-syntax-highlighting ## シンタックスハイライ�
 zinit light zsh-users/zsh-autosuggestions ## 履歴補完
 zinit ice depth=1; zinit light romkatv/powerlevel10k ## powerlevel10k
 zinit light paulirish/git-open
+zinit ice from"gh-r" sbin"!ghq"; zinit light x-motemen/ghq ## ghq
 
 ## 履歴保存管理
 HISTFILE=$ZDOTDIR/.zsh-history

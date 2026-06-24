@@ -30,7 +30,7 @@ archlinux() {
 darwin() {
   info "Initialing key repeat speed"
   defaults write -g InitialKeyRepeat -int 10
-  defaults write -g KeyRepeat -int 1
+  defaults write -g KeyRepeat -int 2
   defaults write -g ApplePressAndHoldEnabled -bool false
 
   info "Initializing Dock layout"
