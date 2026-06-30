@@ -186,10 +186,10 @@ exit 42
     assert_success
     
     # Check that deploy did not create managed SSH key files.
-    assert_not_exists "$HOME/.ssh/git_private"
-    assert_not_exists "$HOME/.ssh/git_public"
+    assert_not_exists "$HOME/.ssh/github-key"
+    assert_not_exists "$HOME/.ssh/github-key.pub"
     assert_symlink_to "$DOTPATH/config/ssh/1password.conf" "$HOME/.ssh/1password.conf"
-    assert_symlink_to "$DOTPATH/config/ssh/git.1password.conf" "$HOME/.ssh/git.conf"
+    assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
 }
 
 @test "deploy script generates SSH keys outside macOS" {
@@ -214,8 +214,8 @@ exit 42
     assert_success
 
     # Check if SSH keys were generated for non-macOS environments.
-    assert_file_exists "$HOME/.ssh/git_private"
-    assert_file_exists "$HOME/.ssh/git_public"
+    assert_file_exists "$HOME/.ssh/github-key"
+    assert_file_exists "$HOME/.ssh/github-key.pub"
     assert_not_exists "$HOME/.ssh/1password.conf"
     assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
 }
@@ -268,7 +268,7 @@ exit 42
         assert_link_exists "$HOME/.ssh/git.conf"
         if [ "$(detect_os)" = "darwin" ]; then
             assert_symlink_to "$DOTPATH/config/ssh/1password.conf" "$HOME/.ssh/1password.conf"
-            assert_symlink_to "$DOTPATH/config/ssh/git.1password.conf" "$HOME/.ssh/git.conf"
+            assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
         else
             assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
         fi

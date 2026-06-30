@@ -70,18 +70,17 @@ if [ ! -f "$HOME/.ssh/authorized_keys" ]; then
   chmod 600 "$HOME"/.ssh/authorized_keys
 fi
 symlink "$CONFPATH/ssh/config" "$HOME/.ssh/config"
+managed_symlink "$CONFPATH/ssh/git.conf" "$HOME/.ssh/git.conf"
 if [ "$os" = "darwin" ]; then
   managed_symlink "$CONFPATH/ssh/1password.conf" "$HOME/.ssh/1password.conf"
-  managed_symlink "$CONFPATH/ssh/git.1password.conf" "$HOME/.ssh/git.conf"
 else
-  managed_symlink "$CONFPATH/ssh/git.conf" "$HOME/.ssh/git.conf"
-  if [ ! -f "$HOME/.ssh/git_private" ]; then
+  if [ ! -f "$HOME/.ssh/github-key" ]; then
     # Use empty passphrase for CI/test environments
     passphrase=""
     [ -z "${CI:-}" ] && [ -z "${DOTFILES_TEST:-}" ] && passphrase="-"
 
-    ssh-keygen -q -f "$HOME"/.ssh/git_private -N "$passphrase"
-    mv "$HOME"/.ssh/git_private.pub "$HOME"/.ssh/git_public
+    ssh-keygen -q -f "$HOME"/.ssh/github-key -N "$passphrase"
+    mv "$HOME"/.ssh/github-key.pub "$HOME"/.ssh/github-key.pub
   fi
 fi
 
