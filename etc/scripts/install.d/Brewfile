@@ -23,12 +23,12 @@ brew "tree"
 brew "go"
 brew "unzip"
 
+brew "1password-cli"
+brew "cloudflared"
+cask "gcloud-cli"
 
 # cask apps
 cask "docker-desktop"
-cask "gcloud-cli"
-cask "1password-cli"
-cask "cloudflare-warp"
 
 # Nerd Fonts — pre-patched fonts installed via Homebrew Cask.
 # Cica (Japanese-aware, Nerd Font + emoji) is handled separately in
