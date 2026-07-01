@@ -13,10 +13,6 @@ if [ "$(detect_os)" = "darwin" ]; then
   export PYTHON_CONFIGURE_OPTS="--enable-framework=no --disable-tk"
 fi
 
-if is_exists "goenv"; then
-   export GOENV_PATH_ORDER=front
-fi
-
 if is_exists "anyenv"; then
    if ! [ -f /tmp/anyenv.cache ]; then
       anyenv init - --no-rehash > /tmp/anyenv.cache

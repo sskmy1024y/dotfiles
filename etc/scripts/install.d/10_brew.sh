@@ -53,8 +53,22 @@ brewery() {
       return 0
     fi
 
-    brew bundle
-    info "brew: tapped successfully."
+    # Run bundle with verbose output and capture it so that, on failure,
+    # we can surface *why* each dependency failed instead of only the
+    # terse "N Brewfile dependencies failed to install" summary.
+    local bundle_log
+    bundle_log="$(mktemp -t brew-bundle)"
+    if brew bundle --verbose --file Brewfile 2>&1 | tee "$bundle_log"; then
+      info "brew: tapped successfully."
+      rm -f "$bundle_log"
+    else
+      error "brew bundle failed. Failed dependencies and their cause:"
+      # Each failure looks like a cause line followed by "<pkg> has failed!";
+      # -B3 keeps the cause line (e.g. "Another version is already linked").
+      grep -B3 -E 'has failed|failed to install' "$bundle_log" | sed 's/^/  /' || true
+      error "brew: full log saved to $bundle_log"
+      return 1
+    fi
   fi
   builtin cd "$DOTPATH"
 }

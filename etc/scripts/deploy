@@ -61,6 +61,10 @@ symlink "$CONFPATH/zsh/.zshrc" "$HOME/.zshrc"
 ensure_dir "$HOME/.zsh"
 wild_symlink "$CONFPATH/zsh/*.zsh" "$HOME/.zsh/"
 
+# goenv
+deploy_config "goenv"
+symlink "$CONFPATH/goenv/.goenvrc" "$HOME/.goenvrc"
+
 # ssh
 deploy_config "ssh"
 os="${DOTFILES_OS_OVERRIDE:-$(detect_os)}"

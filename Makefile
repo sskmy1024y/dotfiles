@@ -9,6 +9,11 @@ DOTFILES   := $(filter-out $(EXCLUSIONS), $(CANDIDATES))
 
 all:
 
+init: ## Setup environment settings
+	@echo '==> Start to install app using pkg manager.'
+	@echo ''
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/scripts/init
+
 update: ## Fetch changes for this repo
 	git pull origin master
 
@@ -16,11 +21,6 @@ deploy: ## Create symlink to home directory
 	@echo '==> Start to deploy dotfiles to home directory.'
 	@echo ''
 	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/scripts/deploy
-
-init: ## Setup environment settings
-	@echo '==> Start to install app using pkg manager.'
-	@echo ''
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/scripts/init
 
 deep: ## Setup more finicky settings
 	@echo '==> Start to install a variety of tools.'

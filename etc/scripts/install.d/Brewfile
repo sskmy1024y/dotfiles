@@ -20,7 +20,6 @@ brew "tree"
 brew "zplug"
 brew "fzf"
 brew "tree"
-brew "go"
 brew "unzip"
 
 brew "cloudflared"

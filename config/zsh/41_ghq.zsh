@@ -20,14 +20,27 @@ function _ghq_select_repo() {
     preview_cmd='ls -la {}'
   fi
 
-  ghq list --full-path | fzf \
-    --prompt='ghq > ' \
-    --height 50% \
-    --reverse \
-    --select-1 \
-    --exit-0 \
-    --query="$1" \
+  local -a fzf_opts
+  fzf_opts=(
+    --prompt='ghq > '
+    --height 50%
+    --reverse
+    --query="$1"
     --preview "$preview_cmd"
+    # 表示・検索は末尾2フィールド(user/repo)だけにする。
+    # 選択結果や preview の {} は元の行(full path)のままなので cd はそのまま動く。
+    --delimiter /
+    --with-nth -2..
+  )
+
+  # 第2引数に "interactive" を渡した場合は、
+  #   - 候補が1つでも自動選択しない (--select-1 を付けない)
+  #   - 候補が0件でも fzf を閉じず、空の状態で表示する (--exit-0 を付けない)
+  if [ "$2" != "interactive" ]; then
+    fzf_opts+=(--select-1 --exit-0)
+  fi
+
+  ghq list --full-path | fzf "${fzf_opts[@]}"
 }
 
 function ghqcd() {
@@ -50,7 +63,7 @@ function ghqcode() {
 
 function ghq-cd-widget() {
   local selected_dir
-  selected_dir=$(_ghq_select_repo)
+  selected_dir=$(_ghq_select_repo "" interactive)
 
   if [ -n "$selected_dir" ]; then
     BUFFER="cd ${(q)selected_dir}"
