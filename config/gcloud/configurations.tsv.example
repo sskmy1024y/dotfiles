@@ -1,0 +1,4 @@
+# name	account	project
+dev	your-account@example.com	your-dev-project
+stg	your-account@example.com	your-stg-project
+prod	your-account@example.com	your-prod-project

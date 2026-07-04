@@ -1,5 +1,6 @@
 # Local config files
 .bashrc_local
+config/gcloud/configurations.tsv
 
 # Local font
 **/*.otf
