@@ -162,11 +162,17 @@ jobs:
           cd test/docker
           setup_repo="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
           setup_ref="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+          # Mount the checkout so the "local" install method tests THIS
+          # commit (test_install.sh falls back to cloning GitHub master
+          # when ~/dotfiles-local is absent, which would silently skip
+          # validating the PR's changes). Harmless for "remote", which
+          # never reads the mount.
           docker run --rm \
             -e CI=true \
             -e DOTFILES_BOOTSTRAP_URL="https://raw.githubusercontent.com/${setup_repo}/refs/heads/${setup_ref}/etc/bootstrap" \
             -e DOTFILES_GITHUB="https://github.com/${setup_repo}.git" \
             -e DOTFILES_BRANCH="${setup_ref}" \
+            -v "${GITHUB_WORKSPACE}:/home/testuser/dotfiles-local:ro" \
             dotfiles-test:${{ matrix.os }} ./test_install.sh ${{ matrix.install }}
 
   syntax-check:
