@@ -95,6 +95,10 @@ The one-liner `etc/bootstrap` downloads the GitHub **tarball** (`master.tar.gz`)
 - `test/docker/Dockerfile.macos` - **Fake** macOS env (Ubuntu + `OSTYPE=darwin`); smoke test only
 - `test/tart/` - **Real** macOS VM tests via Tart on Apple Silicon (see below)
 
+### Docker Linux tests: local vs remote
+- The `*-local` targets (`test-ubuntu-local` / `test-archlinux-local` in `test/docker/Makefile`) must use the compose services `ubuntu-local` / `archlinux-local`, which **mount the working tree** (`../../` → `~/dotfiles-local`) — uncommitted changes ARE tested. (Fixed 2026-07: they previously called the unmounted `test` service, so `test_install.sh` silently fell back to cloning GitHub master and local changes were never exercised.)
+- The `*-remote` targets run the `curl | bash` bootstrap against GitHub `master` — local changes are NOT covered until pushed.
+
 ### Real macOS Testing via Tart (Apple Silicon host required)
 For reproducing and fixing macOS-only failures (curl one-liner errors, missing
 `git` at deploy time, hung `xcode-select --install`, etc.), use the Tart-based
