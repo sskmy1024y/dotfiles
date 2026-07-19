@@ -1,93 +1,9 @@
 #!/usr/bin/env bash
 
-# Author: sskmy1024y
-# Last Modified: 02 Jul 2025.
-
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
 
-# set dotfiles path as default variable
-if [ -z "${DOTPATH:-}" ]; then
-    DOTPATH=$HOME/.dotfiles; export DOTPATH
-fi
+: "${DOTPATH:=$HOME/.dotfiles}"
+export DOTPATH
 
-# load lib functions
-. "$DOTPATH"/etc/lib/header.sh
-
-### Start install script
-# shellcheck disable=SC1078,SC1079,SC2016
-dotfiles_logo='
-      | |     | |  / _(_) |           
-    __| | ___ | |_| |_ _| | ___  ___  
-   / _` |/ _ \| __|  _| | |/ _ \/ __| 
-  | (_| | (_) | |_| | | | |  __/\__ \ 
-   \__,_|\___/ \__|_| |_|_|\___||___/ 
-
-  *** WHAT IS INSIDE? ***
-  1. Download https://github.com/sskmy1024y/dotfiles.git
-  2. Install dev packages
-  3. Symlinking dot files to your home directory
-
-  See the README for documentation.
-  https://github.com/sskmy1024y/dotfiles
-
-  Copyright (c) 2021 "sho" @sskmy1024y
-  Licensed under the MIT license.
-'
-
-printf "%s" "$BOLD"
-echo   "$dotfiles_logo"
-printf "%s" "$NORMAL"
-
-log "*** ATTENTION ***"
-log "This script can change your entire setup."
-log "I recommend to read first. You can even copy commands one by one."
-log "If you use termux on Android, try this."
-log "$ /data/data/com.termux/files/usr/bin/bash"
-echo ""
-read -p "$(warn '(U^w^) < Are you sure you want to install it? [y/N] ')" -n 1 -r
-echo ""
-
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-  echo ""
-  error 'OK. Goodbye.'
-  exit 1
-fi
-
-_deploy() {
-  info "Deploying dotfiles..."
-  if [ ! -d "$DOTPATH" ]; then
-    error "$DOTPATH: not found"
-    exit 1
-  fi
-  
-  cd "$DOTPATH"
-  make deploy
-  info "Deployed!"
-}
-
-_initialize() {
-  case "$@" in
-    "-i" | "--init" | "init")
-      info "Initializing dotfiles..."
-      cd "$DOTPATH"
-      if [ -f Makefile ]; then
-        make init
-        info "Initialized!"
-      else
-        error "Makefile: not found"
-        exit 1
-      fi
-      ;;
-    *)
-      info "Skipped initialize"
-      ;;
-  esac
-}
-
-dotfiles_setup() {
-    _deploy &&
-    _initialize "$@"
-}
-
-dotfiles_setup "$@"
+exec bash "$DOTPATH/etc/install" "$@"

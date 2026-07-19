@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
-# Scenario 02: Local repo, make install
+# Scenario 02: Local repo, etc/install
 #
 # Pushes the local working copy of the dotfiles repo into the VM (so you can
-# iterate on uncommitted changes) and runs `make install`.
+# iterate on uncommitted changes) and runs the host copy of `etc/install`.
 #
 # This isolates installation logic from "does git work / is the URL right".
-# Currently expected to fail at the tpm `git clone` step because git is not
-# installed before `make deploy` runs.
 #
 # Sourced by tart-run; assumes VM_IP, REPO_ROOT and the helper functions are defined.
 
@@ -21,9 +19,11 @@ set -uo pipefail
 # '$HOME' is unsafe: rsync treats it as a literal directory name, while a
 # remote `bash -c 'cd $HOME/...'` expands it — the two end up out of sync.)
 REMOTE_DOTPATH="${REMOTE_HOME}/.dotfiles"
+INSTALL_ARGS="${INSTALL_ARGS:---yes}"
 
-step "Scenario 02: local repo, make install"
+step "Scenario 02: local repo, etc/install"
 log "Pushing ${REPO_ROOT} -> ${TART_SSH_USER}@${VM_IP}:${REMOTE_DOTPATH}"
+log "Install args: ${INSTALL_ARGS}"
 
 vm_push_repo "$VM_IP" "$REPO_ROOT" "$REMOTE_DOTPATH"
 rc=$?
@@ -32,17 +32,25 @@ if [ "$rc" -ne 0 ]; then
   return "$rc" 2>/dev/null || exit "$rc"
 fi
 
-step "Running 'make install' inside the VM"
-vm_exec "$VM_IP" bash -c "'set -x; cd ${REMOTE_DOTPATH} && make install'"
+step "Running 'bash etc/install ${INSTALL_ARGS}' inside the VM"
+vm_exec "$VM_IP" bash -c "'set -x; cd ${REMOTE_DOTPATH} && DOTPATH=${REMOTE_DOTPATH} bash etc/install ${INSTALL_ARGS}'"
 rc=$?
 if [ "$rc" -ne 0 ]; then
-  error "make install exited with ${rc}"
+  error "etc/install exited with ${rc}"
   return "$rc" 2>/dev/null || exit "$rc"
 fi
 
-step "Verifying install..."
-vm_verify_install "$VM_IP"
-rc=$?
+case " ${INSTALL_ARGS} " in
+  *" --plan "*)
+    step "Skipping symlink verification for plan-only run."
+    rc=0
+    ;;
+  *)
+    step "Verifying install..."
+    vm_verify_install "$VM_IP"
+    rc=$?
+    ;;
+esac
 
 if [ "$rc" -eq 0 ]; then
   info "Scenario 02 verified."

@@ -62,7 +62,6 @@ darwin() {
   fi
 
   install_cask_app "arc" "/Applications/Arc.app" "Arc.app"
-  install_cask_app "warp" "/Applications/Warp.app" "Warp.app"
   install_cask_app "1password" "/Applications/1Password.app" "1Password.app"
   install_cask_app "visual-studio-code" "/Applications/Visual Studio Code.app" "VS Code.app"
   install_cask_app "figma" "/Applications/Figma.app" "Figma.app"

@@ -1,8 +1,6 @@
 # Brewfile
 cask_args appdir: "/Applications"
 
-tap "buo/cask-upgrade"
-
 # third party repo
 
 # dev tools
@@ -19,7 +17,6 @@ brew "tmux"
 brew "tree"
 brew "zplug"
 brew "fzf"
-brew "tree"
 brew "unzip"
 
 brew "cloudflared"

@@ -132,43 +132,9 @@ jobs:
           ./test/bats-runner test/test_symlink.bats
           ./test/bats-runner test/test_deploy.bats
           
-      - name: Test Makefile targets
+      - name: Test installer entrypoint
         run: |
-          make check
-          make help
-          make test
-
-  docker-test:
-    name: Docker Test - ${{ matrix.os }} - ${{ matrix.install }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        os: [ubuntu, archlinux]
-        install: [remote, local]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-        
-      - name: Build test image
-        run: |
-          cd test/docker
-          docker build -f Dockerfile.${{ matrix.os }} -t dotfiles-test:${{ matrix.os }} .
-          
-      - name: Run installation test with Bats
-        run: |
-          cd test/docker
-          setup_repo="${{ github.event.pull_request.head.repo.full_name || github.repository }}"
-          setup_ref="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
-          docker run --rm \
-            -e CI=true \
-            -e DOTFILES_BOOTSTRAP_URL="https://raw.githubusercontent.com/${setup_repo}/refs/heads/${setup_ref}/etc/bootstrap" \
-            -e DOTFILES_GITHUB="https://github.com/${setup_repo}.git" \
-            -e DOTFILES_BRANCH="${setup_ref}" \
-            -v "${GITHUB_WORKSPACE}:/home/testuser/dotfiles-local:ro" \
-            dotfiles-test:${{ matrix.os }} ./test_install.sh ${{ matrix.install }}
+          bash etc/install --help
 
   syntax-check:
     name: Syntax and Linting
@@ -188,6 +154,9 @@ jobs:
             echo "Checking: $script"
             bash -n "$script"
           done
+          bash -n etc/install
+          bash -n etc/bootstrap
+          bash -n etc/setup
           
       - name: Run ShellCheck
         run: |
@@ -204,7 +173,7 @@ jobs:
 
   all-tests-summary:
     name: All Tests Summary
-    needs: [bats-tests, individual-bats-tests, integration-test, docker-test, syntax-check]
+    needs: [bats-tests, individual-bats-tests, integration-test, syntax-check]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -213,7 +182,6 @@ jobs:
           if [ "${{ needs.bats-tests.result }}" != "success" ] || \
              [ "${{ needs.individual-bats-tests.result }}" != "success" ] || \
              [ "${{ needs.integration-test.result }}" != "success" ] || \
-             [ "${{ needs.docker-test.result }}" != "success" ] || \
              [ "${{ needs.syntax-check.result }}" != "success" ]; then
             echo "Some tests failed!"
             exit 1

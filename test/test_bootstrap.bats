@@ -26,17 +26,17 @@ for arg in "$@"; do
 done
 
 mkdir -p "$last/etc"
-cat > "$last/etc/setup" <<'SETUP'
+    cat > "$last/etc/install" <<'INSTALL'
 #!/usr/bin/env bash
-printf 'setup:%s\n' "$*" > "$BOOTSTRAP_MARKER"
+printf 'install:%s\n' "$*" > "$BOOTSTRAP_MARKER"
 printf 'branch:%s\n' "${DOTFILES_BRANCH:-}" >> "$BOOTSTRAP_MARKER"
-SETUP
+INSTALL
 EOF
     chmod +x "$mock_dir/git"
     export PATH="$mock_dir:$PATH"
 }
 
-@test "bootstrap clones requested branch and delegates to setup" {
+@test "bootstrap clones requested branch and delegates to install" {
     write_mock_git_clone
 
     export HOME="$TEST_TEMP_DIR/home"
@@ -45,12 +45,12 @@ EOF
     export DOTFILES_BRANCH="feature/bootstrap"
     export BOOTSTRAP_MARKER="$TEST_TEMP_DIR/marker"
 
-    run bash "$DOTPATH_SOURCE/etc/bootstrap" init
+    run bash "$DOTPATH_SOURCE/etc/bootstrap" --check
 
     assert_success
-    assert_file_exists "$DOTPATH/etc/setup"
+    assert_file_exists "$DOTPATH/etc/install"
     assert_file_exists "$BOOTSTRAP_MARKER"
-    assert_file_contains "$BOOTSTRAP_MARKER" "setup:init"
+    assert_file_contains "$BOOTSTRAP_MARKER" "install:--check"
     assert_file_contains "$BOOTSTRAP_MARKER" "branch:feature/bootstrap"
 }
 
@@ -69,13 +69,13 @@ EOF
     export DOTPATH="$TEST_TEMP_DIR/home/.dotfiles"
     export BOOTSTRAP_MARKER="$TEST_TEMP_DIR/marker"
     mkdir -p "$DOTPATH/etc"
-    cat > "$DOTPATH/etc/setup" <<'SETUP'
+    cat > "$DOTPATH/etc/install" <<'INSTALL'
 #!/usr/bin/env bash
 printf 'existing:%s\n' "$*" > "$BOOTSTRAP_MARKER"
-SETUP
+INSTALL
 
-    run bash "$DOTPATH_SOURCE/etc/bootstrap" deploy
+    run bash "$DOTPATH_SOURCE/etc/bootstrap" --check
 
     assert_success
-    assert_file_contains "$BOOTSTRAP_MARKER" "existing:deploy"
+    assert_file_contains "$BOOTSTRAP_MARKER" "existing:--check"
 }

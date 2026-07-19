@@ -1,0 +1,422 @@
+#!/usr/bin/env bash
+
+trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
+set -euo pipefail
+
+: "${DOTFILES_GITHUB:=https://github.com/sskmy1024y/dotfiles.git}"
+: "${DOTFILES_BRANCH:=master}"
+: "${DOTFILES_ASSUME_YES:=}"
+: "${TERRAFORM_VERSION:=}"
+
+info() { echo "[+] $*"; }
+warn() { echo "[*] $*"; }
+error() { echo "[-] $*" >&2; }
+is_exists() { command -v "$1" >/dev/null 2>&1; }
+
+script_repo_root() {
+  local source_dir
+  source_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)" || return 1
+
+  if [ -d "${source_dir}/../terraform" ]; then
+    cd "${source_dir}/.." >/dev/null 2>&1 && pwd -P
+  else
+    return 1
+  fi
+}
+
+if [ -z "${DOTPATH:-}" ]; then
+  if DOTPATH="$(script_repo_root 2>/dev/null)"; then
+    export DOTPATH
+  else
+    DOTPATH="$HOME/.dotfiles"; export DOTPATH
+  fi
+fi
+
+usage() {
+  cat <<'USAGE'
+Usage: install [options]
+
+Options:
+  -y, --yes                  Apply without an interactive confirmation.
+      --plan                 Run terraform plan only.
+      --check                Check required commands and repository presence only.
+      --no-brew              Do not run brew bundle.
+      --no-macos-defaults    Do not write macOS defaults.
+      --no-1password-ssh     Do not link 1Password SSH config.
+  -h, --help                 Show this help.
+
+Environment:
+  DOTPATH                    Install path. Default: ~/.dotfiles
+  DOTFILES_GITHUB            Git remote. Default: https://github.com/sskmy1024y/dotfiles.git
+  DOTFILES_BRANCH            Git branch. Default: master
+  DOTFILES_ASSUME_YES=1      Same as --yes.
+  TERRAFORM_VERSION          Terraform version for non-Homebrew installs.
+USAGE
+}
+
+mode="apply"
+enable_brew="true"
+enable_macos_defaults="true"
+enable_1password_ssh="true"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --)
+      ;;
+    -y | --yes)
+      DOTFILES_ASSUME_YES=1
+      ;;
+    --plan)
+      mode="plan"
+      ;;
+    --check)
+      mode="check"
+      ;;
+    --no-brew)
+      enable_brew="false"
+      ;;
+    --no-macos-defaults)
+      enable_macos_defaults="false"
+      ;;
+    --no-1password-ssh)
+      enable_1password_ssh="false"
+      ;;
+    -h | --help)
+      usage
+      exit 0
+      ;;
+    *)
+      error "Unknown option: $1"
+      usage >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
+
+case "$(uname -s 2>/dev/null || true)" in
+  Darwin)
+    ;;
+  *)
+    enable_brew="false"
+    enable_macos_defaults="false"
+    enable_1password_ssh="false"
+    ;;
+esac
+
+detect_os() {
+  case "$(uname -s 2>/dev/null || true)" in
+    Darwin) echo "darwin" ;;
+    Linux) echo "linux" ;;
+    *) echo "unknown" ;;
+  esac
+}
+
+detect_arch() {
+  case "$(uname -m 2>/dev/null || true)" in
+    arm64 | aarch64) echo "arm64" ;;
+    x86_64 | amd64) echo "amd64" ;;
+    *) echo "unknown" ;;
+  esac
+}
+
+brew_on_path() {
+  if is_exists brew; then
+    return 0
+  fi
+
+  for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+    if [ -x "$brew_bin" ]; then
+      PATH="$(dirname "$brew_bin"):$PATH"
+      export PATH
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+ensure_homebrew() {
+  if brew_on_path; then
+    return 0
+  fi
+
+  if [ "$(detect_os)" != "darwin" ]; then
+    return 1
+  fi
+
+  if [ "$mode" = "check" ]; then
+    return 1
+  fi
+
+  if ! is_exists curl; then
+    error "curl is required to install Homebrew"
+    return 1
+  fi
+
+  info "Installing Homebrew..."
+  NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  brew_on_path
+}
+
+terraform_version() {
+  if [ -n "$TERRAFORM_VERSION" ]; then
+    echo "$TERRAFORM_VERSION"
+    return 0
+  fi
+
+  if [ -f "$DOTPATH/terraform/.terraform-version" ]; then
+    sed -n '1p' "$DOTPATH/terraform/.terraform-version"
+    return 0
+  fi
+
+  echo "1.13.1"
+}
+
+install_terraform_with_archive() {
+  local version os arch url tmp_dir archive
+  version="$(terraform_version)"
+  os="$(detect_os)"
+  arch="$(detect_arch)"
+
+  if [ "$os" = "unknown" ] || [ "$arch" = "unknown" ]; then
+    error "unsupported platform for Terraform archive install: $(uname -s 2>/dev/null || true) $(uname -m 2>/dev/null || true)"
+    return 1
+  fi
+
+  if ! is_exists unzip; then
+    error "unzip is required to install Terraform from the release archive"
+    return 1
+  fi
+
+  url="https://releases.hashicorp.com/terraform/${version}/terraform_${version}_${os}_${arch}.zip"
+  tmp_dir="$(mktemp -d)"
+  archive="$tmp_dir/terraform.zip"
+
+  info "Downloading Terraform ${version}..."
+  if is_exists curl; then
+    curl -fsSL "$url" -o "$archive"
+  elif is_exists wget; then
+    wget -qO "$archive" "$url"
+  else
+    error "curl or wget is required to download Terraform"
+    return 1
+  fi
+
+  unzip -q "$archive" -d "$tmp_dir"
+  mkdir -p "$HOME/.local/bin"
+  mv "$tmp_dir/terraform" "$HOME/.local/bin/terraform"
+  chmod +x "$HOME/.local/bin/terraform"
+  PATH="$HOME/.local/bin:$PATH"
+  export PATH
+  rm -rf "$tmp_dir"
+}
+
+install_terraform() {
+  if is_exists terraform; then
+    return 0
+  fi
+
+  if [ "$mode" = "check" ]; then
+    return 1
+  fi
+
+  info "Terraform is not installed. Installing Terraform..."
+
+  if [ "$(detect_os)" = "darwin" ] && [ "$enable_brew" = "true" ]; then
+    if ensure_homebrew && brew install terraform; then
+      :
+    else
+      warn "Homebrew Terraform install failed; falling back to the release archive."
+      install_terraform_with_archive
+    fi
+  else
+    if install_terraform_with_archive; then
+      :
+    elif is_exists brew || brew_on_path; then
+      brew install terraform
+    else
+      return 1
+    fi
+  fi
+
+  is_exists terraform
+}
+
+missing_bootstrap_commands() {
+  local missing=0
+
+  for command in bash git; do
+    if ! is_exists "$command"; then
+      error "$command: command not found"
+      missing=1
+    fi
+  done
+
+  return "$missing"
+}
+
+missing_runtime_commands() {
+  local missing=0
+
+  if ! is_exists terraform; then
+    error "terraform: command not found"
+    missing=1
+  fi
+
+  if [ "$enable_brew" = "true" ] && ! brew_on_path; then
+    error "brew: command not found"
+    missing=1
+  fi
+
+  if [ "$enable_macos_defaults" = "true" ] && ! is_exists defaults; then
+    error "defaults: command not found"
+    missing=1
+  fi
+
+  return "$missing"
+}
+
+print_install_hints() {
+  cat >&2 <<'HINTS'
+
+Required commands are missing.
+
+macOS example:
+  xcode-select --install
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  brew install git terraform
+
+Other platforms:
+  Install git and Terraform with your package manager, then rerun this script.
+HINTS
+}
+
+ensure_requirements() {
+  if ! missing_bootstrap_commands; then
+    print_install_hints
+    exit 1
+  fi
+}
+
+ensure_runtime_requirements() {
+  if [ "$mode" = "check" ]; then
+    if ! missing_runtime_commands; then
+      print_install_hints
+      exit 1
+    fi
+    return 0
+  fi
+
+  if ! install_terraform; then
+    error "Failed to install Terraform"
+    print_install_hints
+    exit 1
+  fi
+
+  if [ "$enable_brew" = "true" ] && ! ensure_homebrew; then
+    error "Failed to install or find Homebrew"
+    print_install_hints
+    exit 1
+  fi
+
+  if [ "$enable_macos_defaults" = "true" ] && ! is_exists defaults; then
+    error "defaults: command not found"
+    print_install_hints
+    exit 1
+  fi
+}
+
+ensure_repo() {
+  if [ -d "$DOTPATH/.git" ]; then
+    info "Using existing dotfiles checkout: $DOTPATH"
+    return 0
+  fi
+
+  if [ -f "$DOTPATH/etc/install" ] && [ -d "$DOTPATH/terraform" ]; then
+    info "Using existing dotfiles tree: $DOTPATH"
+    return 0
+  fi
+
+  if [ -e "$DOTPATH" ]; then
+    error "$DOTPATH already exists but is not a git checkout"
+    exit 1
+  fi
+
+  info "Cloning dotfiles..."
+  git clone --branch "$DOTFILES_BRANCH" --single-branch "$DOTFILES_GITHUB" "$DOTPATH"
+}
+
+confirm_apply() {
+  if [ "$mode" != "apply" ] || [ -n "$DOTFILES_ASSUME_YES" ]; then
+    return 0
+  fi
+
+  echo ""
+  warn "This will run Terraform and may change files under your home directory."
+  printf "Continue? [y/N] "
+  read -r reply
+  case "$reply" in
+    [Yy] | [Yy][Ee][Ss])
+      ;;
+    *)
+      error "Aborted."
+      exit 1
+      ;;
+  esac
+}
+
+terraform_args() {
+  printf '%s\n' \
+    "-var=enable_brew=${enable_brew}" \
+    "-var=enable_macos_defaults=${enable_macos_defaults}" \
+    "-var=enable_1password_ssh=${enable_1password_ssh}"
+}
+
+run_terraform() {
+  local terraform_dir
+  terraform_dir="$DOTPATH/terraform"
+
+  if [ ! -d "$terraform_dir" ]; then
+    error "$terraform_dir: not found"
+    exit 1
+  fi
+
+  info "Initializing Terraform..."
+  terraform -chdir="$terraform_dir" init
+
+  case "$mode" in
+    check)
+      info "Preflight check completed."
+      ;;
+    plan)
+      info "Planning Terraform changes..."
+      terraform -chdir="$terraform_dir" plan $(terraform_args)
+      ;;
+    apply)
+      confirm_apply
+      info "Applying Terraform changes..."
+      terraform -chdir="$terraform_dir" apply -auto-approve $(terraform_args)
+      ;;
+  esac
+}
+
+main() {
+  ensure_requirements
+  if [ "$mode" = "check" ]; then
+    ensure_runtime_requirements
+    if [ -d "$DOTPATH/.git" ]; then
+      info "Dotfiles checkout found: $DOTPATH"
+    else
+      warn "Dotfiles checkout not found: $DOTPATH"
+    fi
+    info "Preflight check completed."
+    exit 0
+  fi
+
+  ensure_repo
+  ensure_runtime_requirements
+  run_terraform
+}
+
+main

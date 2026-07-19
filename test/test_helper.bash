@@ -6,7 +6,7 @@
 export TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Set DOTPATH - handle both local and Docker environments
-if [ -d "$TEST_DIR/.." ] && [ -f "$TEST_DIR/../Makefile" ]; then
+if [ -d "$TEST_DIR/.." ] && [ -f "$TEST_DIR/../etc/install" ]; then
     export DOTPATH="$(cd "$TEST_DIR/.." && pwd)"
 elif [ -d "${HOME}/.dotfiles" ]; then
     # Docker environment or home directory installation

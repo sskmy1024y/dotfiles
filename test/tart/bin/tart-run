@@ -129,6 +129,8 @@ if [ "$SHELL_MODE" = true ]; then
   sshpass -p "$TART_SSH_PASS" ssh \
     -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null \
+    -o PubkeyAuthentication=no \
+    -o IdentitiesOnly=yes \
     -o LogLevel=ERROR \
     "${TART_SSH_USER}@${VM_IP}"
   exit 0

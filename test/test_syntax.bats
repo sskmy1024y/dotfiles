@@ -208,20 +208,11 @@ find_shell_scripts() {
     [ $found -eq 0 ]
 }
 
-# Test Makefile
-@test "Makefile has valid syntax" {
-    run make -n check
+# Test installer
+@test "installer help works" {
+    run bash "$DOTPATH/etc/install" --help
     assert_success
-}
-
-@test "Makefile help target exists" {
-    run make -n help
-    assert_success
-}
-
-@test "Makefile test target exists" {
-    run make -n test
-    assert_success
+    assert_output --partial "Usage: install"
 }
 
 # Test for consistent file permissions
@@ -229,6 +220,7 @@ find_shell_scripts() {
     local scripts=(
         "$DOTPATH/etc/scripts/deploy"
         "$DOTPATH/etc/scripts/init"
+        "$DOTPATH/etc/install"
         "$DOTPATH/etc/setup"
         "$DOTPATH/etc/bootstrap"
         "$DOTPATH/test/install_bats.sh"

@@ -1,75 +1,26 @@
 #!/usr/bin/env bash
 
-# Author: sskmy1024y
-# Last Modified: 12 Jun 2026.
-
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
 
-if [ -z "${DOTPATH:-}" ]; then
-    DOTPATH=$HOME/.dotfiles; export DOTPATH
-fi
-
+: "${DOTPATH:=$HOME/.dotfiles}"
 : "${DOTFILES_GITHUB:=https://github.com/sskmy1024y/dotfiles.git}"
 : "${DOTFILES_BRANCH:=master}"
-export DOTFILES_GITHUB DOTFILES_BRANCH
+export DOTPATH DOTFILES_GITHUB DOTFILES_BRANCH
 
-info() { echo "[+] $*"; }
-warn() { echo "[*] $*"; }
-error() { echo "[-] $*" >&2; }
-is_exists() { command -v "$1" >/dev/null 2>&1; }
-
-github_archive_url() {
-  local repo_slug
-  case "$DOTFILES_GITHUB" in
-    https://github.com/*.git)
-      repo_slug="${DOTFILES_GITHUB#https://github.com/}"
-      repo_slug="${repo_slug%.git}"
-      ;;
-    git@github.com:*.git)
-      repo_slug="${DOTFILES_GITHUB#git@github.com:}"
-      repo_slug="${repo_slug%.git}"
-      ;;
-    *)
-      repo_slug="sskmy1024y/dotfiles"
-      ;;
-  esac
-  echo "https://github.com/${repo_slug}/archive/refs/heads/${DOTFILES_BRANCH}.tar.gz"
-}
-
-download_dotfiles() {
-  if [ -d "$DOTPATH" ]; then
-    warn "Dotfiles are already installed"
-    return 0
-  fi
-
-  info "Downloading dotfiles..."
-  if is_exists "git"; then
-    git clone --branch "$DOTFILES_BRANCH" --single-branch "$DOTFILES_GITHUB" "$DOTPATH"
-    return 0
-  fi
-
-  if ! is_exists "curl" && ! is_exists "wget"; then
-    error "git, curl, or wget required"
+if [ ! -f "$DOTPATH/etc/install" ]; then
+  if ! command -v git >/dev/null 2>&1; then
+    echo "[-] git: command not found" >&2
+    echo "[-] Install git, then rerun this script." >&2
     exit 1
   fi
 
-  local tarball_url
-  tarball_url="${DOTFILES_TARBALL_URL:-$(github_archive_url)}"
-  mkdir -p "$DOTPATH"
-
-  if is_exists "curl"; then
-    curl -fsSL "$tarball_url" | tar xz --strip-components=1 -C "$DOTPATH"
-  else
-    wget -qO- "$tarball_url" | tar xz --strip-components=1 -C "$DOTPATH"
-  fi
-
-  if [ ! -f "$DOTPATH/etc/setup" ]; then
-    error "etc/setup: not found after extracting ${tarball_url}"
+  if [ -e "$DOTPATH" ]; then
+    echo "[-] $DOTPATH exists but $DOTPATH/etc/install is not found" >&2
     exit 1
   fi
-}
 
-download_dotfiles
-cd "$DOTPATH"
-exec bash "$DOTPATH/etc/setup" "$@"
+  git clone --branch "$DOTFILES_BRANCH" --single-branch "$DOTFILES_GITHUB" "$DOTPATH"
+fi
+
+exec bash "$DOTPATH/etc/install" "$@"
