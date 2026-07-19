@@ -84,7 +84,6 @@ else
     [ -z "${CI:-}" ] && [ -z "${DOTFILES_TEST:-}" ] && passphrase="-"
 
     ssh-keygen -q -f "$HOME"/.ssh/github-key -N "$passphrase"
-    mv "$HOME"/.ssh/github-key.pub "$HOME"/.ssh/github-key.pub
   fi
 fi
 

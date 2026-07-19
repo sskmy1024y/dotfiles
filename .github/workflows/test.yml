@@ -167,6 +167,7 @@ jobs:
             -e DOTFILES_BOOTSTRAP_URL="https://raw.githubusercontent.com/${setup_repo}/refs/heads/${setup_ref}/etc/bootstrap" \
             -e DOTFILES_GITHUB="https://github.com/${setup_repo}.git" \
             -e DOTFILES_BRANCH="${setup_ref}" \
+            -v "${GITHUB_WORKSPACE}:/home/testuser/dotfiles-local:ro" \
             dotfiles-test:${{ matrix.os }} ./test_install.sh ${{ matrix.install }}
 
   syntax-check:
