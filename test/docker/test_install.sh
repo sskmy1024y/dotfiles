@@ -61,7 +61,8 @@ test_remote_install() {
     info "Bootstrap URL: $bootstrap_url"
     
     # Download and run setup script
-    if bash -c "$(curl -fsSL "$bootstrap_url")" <<< "y"; then
+    # DOTFILES_ASSUME_YES skips the interactive confirmation in etc/install.
+    if DOTFILES_ASSUME_YES=1 bash -c "$(curl -fsSL "$bootstrap_url")"; then
         info "Remote installation completed"
     else
         error "Remote installation failed"
@@ -119,8 +120,13 @@ test_local_install() {
     
     cd "$HOME/.dotfiles"
     
-    # Run make deploy (without init for testing)
-    if make deploy; then
+    # Drop Terraform state that may have been copied in from the host working
+    # tree so the container always starts from a clean slate.
+    rm -rf terraform/.terraform terraform/terraform.tfstate terraform/terraform.tfstate.backup
+
+    # On Linux, etc/install automatically disables the brew, macOS-defaults and
+    # 1Password modules, so this applies the symlink module only.
+    if bash etc/install --yes; then
         info "Local installation completed"
     else
         error "Local installation failed"
@@ -181,29 +187,29 @@ verify_installation() {
     fi
 }
 
-# Test make commands
-test_make_commands() {
-    info "Testing Makefile commands..."
+# Test installer entrypoint commands
+test_installer_commands() {
+    info "Testing installer entrypoint..."
     
     cd "$HOME/.dotfiles"
     
-    # Test make check
-    echo -e "\n--- Testing 'make check' ---"
-    if make check; then
-        echo -e "${GREEN}✓${NC} make check succeeded"
+    # Test etc/install --check (preflight; requires terraform on PATH)
+    echo -e "\n--- Testing 'etc/install --check' ---"
+    if bash etc/install --check; then
+        echo -e "${GREEN}✓${NC} etc/install --check succeeded"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-        echo -e "${RED}✗${NC} make check failed"
+        echo -e "${RED}✗${NC} etc/install --check failed"
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
     
-    # Test make help
-    echo -e "\n--- Testing 'make help' ---"
-    if make help; then
-        echo -e "${GREEN}✓${NC} make help succeeded"
+    # Test etc/install --help
+    echo -e "\n--- Testing 'etc/install --help' ---"
+    if bash etc/install --help; then
+        echo -e "${GREEN}✓${NC} etc/install --help succeeded"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-        echo -e "${RED}✗${NC} make help failed"
+        echo -e "${RED}✗${NC} etc/install --help failed"
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
@@ -217,14 +223,20 @@ test_cleanup() {
     # Count symlinks before cleanup
     local before_count=$(find "$HOME" -type l 2>/dev/null | wc -l)
     
-    # Run make clean
-    if make clean; then
-        echo -e "${GREEN}✓${NC} make clean succeeded"
+    # Tear down the Terraform-managed symlinks, then remove the checkout.
+    if terraform -chdir=terraform destroy -auto-approve \
+        -var=enable_brew=false \
+        -var=enable_macos_defaults=false \
+        -var=enable_1password_ssh=false; then
+        echo -e "${GREEN}✓${NC} terraform destroy succeeded"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-        echo -e "${RED}✗${NC} make clean failed"
+        echo -e "${RED}✗${NC} terraform destroy failed"
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
+
+    cd "$HOME"
+    rm -rf "$HOME/.dotfiles"
     
     # Check if dotfiles were removed
     if [ ! -d "$HOME/.dotfiles" ]; then
@@ -270,9 +282,13 @@ main() {
             ;;
     esac
     
+    # etc/install may install Terraform into ~/.local/bin; make sure the
+    # follow-up invocations below can find it.
+    export PATH="$HOME/.local/bin:$PATH"
+
     # Run verification tests
     verify_installation
-    test_make_commands
+    test_installer_commands
     
     # Run Bats tests if installation succeeded
     if [ -d "$HOME/.dotfiles" ] && [ "${SKIP_BATS_TESTS:-}" != "true" ]; then

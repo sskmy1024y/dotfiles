@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     make \
     shellcheck \
     ncurses-bin \
+    # Required by etc/install to unpack the Terraform release archive
+    unzip \
     # Additional packages for Bats testing
     bash \
     coreutils \

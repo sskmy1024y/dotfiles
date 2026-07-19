@@ -13,6 +13,8 @@ RUN pacman -Syu --noconfirm && \
     shellcheck \
     openssh \
     ncurses \
+    # Required by etc/install to unpack the Terraform release archive
+    unzip \
     # Additional packages for Bats testing
     bash \
     coreutils \

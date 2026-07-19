@@ -196,8 +196,10 @@ find_shell_scripts() {
     # Check each script
     for script in "${scripts[@]}"; do
         if grep -q "/Users/\|/home/" "$script" 2>/dev/null; then
-            # Allow specific exceptions (like in test files or comments)
-            if ! grep -v "^#" "$script" | grep -q "/Users/\|/home/"; then
+            # Allow specific exceptions: comments, and the Linuxbrew prefix
+            # (/home/linuxbrew/.linuxbrew) which is a fixed system-wide install
+            # location rather than a hardcoded user home directory.
+            if ! grep -v "^#" "$script" | grep -v "/home/linuxbrew/" | grep -q "/Users/\|/home/"; then
                 continue
             fi
             echo "Hardcoded path in: ${script#$DOTPATH/}"

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Author: sskmy1024y
+# Description: Compatibility wrapper that delegates to etc/install.
+
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
 

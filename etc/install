@@ -366,16 +366,15 @@ confirm_apply() {
   esac
 }
 
-terraform_args() {
-  printf '%s\n' \
-    "-var=enable_brew=${enable_brew}" \
-    "-var=enable_macos_defaults=${enable_macos_defaults}" \
-    "-var=enable_1password_ssh=${enable_1password_ssh}"
-}
-
 run_terraform() {
   local terraform_dir
   terraform_dir="$DOTPATH/terraform"
+
+  local -a var_args=(
+    "-var=enable_brew=${enable_brew}"
+    "-var=enable_macos_defaults=${enable_macos_defaults}"
+    "-var=enable_1password_ssh=${enable_1password_ssh}"
+  )
 
   if [ ! -d "$terraform_dir" ]; then
     error "$terraform_dir: not found"
@@ -391,12 +390,12 @@ run_terraform() {
       ;;
     plan)
       info "Planning Terraform changes..."
-      terraform -chdir="$terraform_dir" plan $(terraform_args)
+      terraform -chdir="$terraform_dir" plan "${var_args[@]}"
       ;;
     apply)
       confirm_apply
       info "Applying Terraform changes..."
-      terraform -chdir="$terraform_dir" apply -auto-approve $(terraform_args)
+      terraform -chdir="$terraform_dir" apply -auto-approve "${var_args[@]}"
       ;;
   esac
 }
