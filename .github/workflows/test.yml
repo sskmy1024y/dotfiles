@@ -176,6 +176,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          # Full history so paths-filter can diff against the push's "before"
+          # commit. With the default shallow clone it cannot find the base
+          # commit and falls back to treating all files as changed, which
+          # always triggers the (slow) brew-bundle job.
+          fetch-depth: 0
 
       - name: Detect Brewfile changes
         uses: dorny/paths-filter@v3
