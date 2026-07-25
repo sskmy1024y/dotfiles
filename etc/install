@@ -12,6 +12,13 @@ info() { echo "[+] $*"; }
 warn() { echo "[*] $*"; }
 error() { echo "[-] $*" >&2; }
 is_exists() { command -v "$1" >/dev/null 2>&1; }
+git_works() {
+  is_exists git || return 1
+  if [ "$(detect_os)" = "darwin" ] && is_exists xcode-select; then
+    xcode-select -p >/dev/null 2>&1 || return 1
+  fi
+  git --version >/dev/null 2>&1
+}
 
 script_repo_root() {
   local source_dir
@@ -159,6 +166,82 @@ ensure_homebrew() {
   brew_on_path
 }
 
+confirm_package_install() {
+  local command="$1" reply
+
+  if [ -n "$DOTFILES_ASSUME_YES" ] || [ ! -t 0 ]; then
+    return 0
+  fi
+
+  printf "%s is required. Install it now? [Y/n] " "$command"
+  read -r reply
+  case "$reply" in
+    "" | [Yy] | [Yy][Ee][Ss]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+run_as_root() {
+  if [ "$(id -u)" -eq 0 ]; then
+    "$@"
+  elif is_exists sudo; then
+    sudo "$@"
+  else
+    error "sudo is required to install packages"
+    return 1
+  fi
+}
+
+install_platform_package() {
+  local command="$1" package="$2"
+
+  if ! confirm_package_install "$command"; then
+    error "$command installation was declined"
+    return 1
+  fi
+
+  info "Installing ${command}..."
+  if [ "$(detect_os)" = "darwin" ]; then
+    ensure_homebrew && brew install "$package"
+  elif is_exists apt-get; then
+    run_as_root apt-get update && run_as_root apt-get install -y "$package"
+  elif is_exists pacman; then
+    run_as_root pacman -Sy --noconfirm "$package"
+  elif is_exists dnf; then
+    run_as_root dnf install -y "$package"
+  elif is_exists yum; then
+    run_as_root yum install -y "$package"
+  elif is_exists apk; then
+    run_as_root apk add "$package"
+  elif is_exists zypper; then
+    run_as_root zypper --non-interactive install "$package"
+  else
+    error "No supported package manager was found to install ${command}"
+    return 1
+  fi
+}
+
+ensure_git() {
+  git_works && return 0
+  install_platform_package git git
+  git_works
+}
+
+ensure_unzip() {
+  is_exists unzip && return 0
+  install_platform_package unzip unzip
+  is_exists unzip
+}
+
+ensure_ssh_keygen() {
+  local package="openssh-client"
+  is_exists ssh-keygen && return 0
+  is_exists pacman && package="openssh"
+  is_exists apk && package="openssh-keygen"
+  install_platform_package ssh-keygen "$package"
+  is_exists ssh-keygen
+}
+
 terraform_version() {
   if [ -n "$TERRAFORM_VERSION" ]; then
     echo "$TERRAFORM_VERSION"
@@ -184,8 +267,8 @@ install_terraform_with_archive() {
     return 1
   fi
 
-  if ! is_exists unzip; then
-    error "unzip is required to install Terraform from the release archive"
+  if ! ensure_unzip; then
+    error "Failed to install unzip, which is required for Terraform"
     return 1
   fi
 
@@ -246,12 +329,10 @@ install_terraform() {
 missing_bootstrap_commands() {
   local missing=0
 
-  for command in bash git; do
-    if ! is_exists "$command"; then
-      error "$command: command not found"
-      missing=1
-    fi
-  done
+  if ! is_exists bash; then
+    error "bash: command not found"
+    missing=1
+  fi
 
   return "$missing"
 }
@@ -301,11 +382,27 @@ ensure_requirements() {
 
 ensure_runtime_requirements() {
   if [ "$mode" = "check" ]; then
+    if ! git_works; then
+      error "git: command not found or not functional"
+      return 1
+    fi
     if ! missing_runtime_commands; then
       print_install_hints
       exit 1
     fi
     return 0
+  fi
+
+  if ! ensure_git; then
+    error "Failed to install or find a functional Git"
+    print_install_hints
+    exit 1
+  fi
+
+  if [ "$(detect_os)" = "linux" ] && ! ensure_ssh_keygen; then
+    error "Failed to install or find ssh-keygen"
+    print_install_hints
+    exit 1
   fi
 
   if ! install_terraform; then
@@ -374,6 +471,7 @@ run_terraform() {
     "-var=enable_brew=${enable_brew}"
     "-var=enable_macos_defaults=${enable_macos_defaults}"
     "-var=enable_1password_ssh=${enable_1password_ssh}"
+    "-var=enable_linux_ssh_identity=$([ "$(detect_os)" = "linux" ] && echo true || echo false)"
   )
 
   if [ ! -d "$terraform_dir" ]; then

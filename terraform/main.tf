@@ -93,12 +93,6 @@ locals {
       force           = false
       replace_symlink = false
     },
-    {
-      source          = "${local.dotfiles_root}/config/claude/agents"
-      target          = "${local.home}/.claude/agents"
-      force           = false
-      replace_symlink = false
-    }
   ]
 
   optional_links = var.enable_1password_ssh ? [
@@ -207,12 +201,57 @@ locals {
   }
 }
 
+resource "terraform_data" "linux_ssh_identity" {
+  count = var.enable_linux_ssh_identity ? 1 : 0
+
+  triggers_replace = {
+    private_key = "${local.home}/.ssh/github-key"
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
+    environment = {
+      PRIVATE_KEY = "${local.home}/.ssh/github-key"
+    }
+    command = <<-EOT
+      set -euo pipefail
+      mkdir -p "$(dirname "$PRIVATE_KEY")"
+      chmod 700 "$(dirname "$PRIVATE_KEY")"
+      if [ ! -f "$PRIVATE_KEY" ]; then
+        ssh-keygen -q -t ed25519 -f "$PRIVATE_KEY" -N ""
+      fi
+      chmod 600 "$PRIVATE_KEY"
+      chmod 644 "$PRIVATE_KEY.pub"
+    EOT
+  }
+}
+
+resource "terraform_data" "tpm" {
+  triggers_replace = {
+    installer_sha256 = filesha256("${local.dotfiles_root}/etc/scripts/install.d/30_tmux.sh")
+    install_path     = "${local.home}/.tmux/plugins/tpm"
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
+    environment = {
+      DOTPATH = local.dotfiles_root
+    }
+    command = "bash \"$DOTPATH/etc/scripts/install.d/30_tmux.sh\""
+  }
+}
+
 module "symlinks" {
   source = "./modules/symlink"
 
   directories = local.symlink_directories
   touch_files = local.touch_files
   links       = concat(local.base_links, local.optional_links, local.zsh_links, local.bin_links)
+
+  depends_on = [
+    terraform_data.linux_ssh_identity,
+    terraform_data.tpm
+  ]
 }
 
 module "brew" {

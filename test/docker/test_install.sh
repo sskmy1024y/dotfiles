@@ -165,6 +165,17 @@ verify_installation() {
     echo -e "\n--- Checking SSH configs ---"
     assert_symlink "$HOME/.ssh/config" "SSH config"
     assert_exists "$HOME/.ssh/authorized_keys" "SSH authorized_keys"
+    assert_exists "$HOME/.ssh/github-key" "GitHub SSH private key"
+    assert_exists "$HOME/.ssh/github-key.pub" "GitHub SSH public key"
+    assert_exists "$HOME/.tmux/plugins/tpm" "TPM installation"
+
+    if [ -L "$HOME/.claude/agents" ]; then
+        echo -e "${RED}✗${NC} Claude agents symlink must not be dangling"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    else
+        echo -e "${GREEN}✓${NC} No dangling Claude agents symlink"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    fi
     
     # Check permissions
     echo -e "\n--- Checking permissions ---"

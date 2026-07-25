@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 # Author: sskmy1024y
-# Description: Remote one-liner entrypoint. Clones the repository if needed,
-#              then delegates to etc/install.
+# Description: Remote one-liner entrypoint. Downloads the repository if needed,
+#              then delegates to etc/install. Git is intentionally optional so
+#              this also works before Xcode CLT is installed on macOS.
 
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
@@ -10,21 +11,50 @@ set -euo pipefail
 : "${DOTPATH:=$HOME/.dotfiles}"
 : "${DOTFILES_GITHUB:=https://github.com/sskmy1024y/dotfiles.git}"
 : "${DOTFILES_BRANCH:=master}"
+: "${DOTFILES_ARCHIVE_URL:=${DOTFILES_GITHUB%.git}/archive/refs/heads/${DOTFILES_BRANCH}.tar.gz}"
 export DOTPATH DOTFILES_GITHUB DOTFILES_BRANCH
 
-if [ ! -f "$DOTPATH/etc/install" ]; then
-  if ! command -v git >/dev/null 2>&1; then
-    echo "[-] git: command not found" >&2
-    echo "[-] Install git, then rerun this script." >&2
-    exit 1
+git_works() {
+  command -v git >/dev/null 2>&1 || return 1
+  if [ "$(uname -s 2>/dev/null || true)" = "Darwin" ] && command -v xcode-select >/dev/null 2>&1; then
+    xcode-select -p >/dev/null 2>&1 || return 1
   fi
+  git --version >/dev/null 2>&1
+}
 
+if [ ! -f "$DOTPATH/etc/install" ]; then
   if [ -e "$DOTPATH" ]; then
     echo "[-] $DOTPATH exists but $DOTPATH/etc/install is not found" >&2
     exit 1
   fi
 
-  git clone --branch "$DOTFILES_BRANCH" --single-branch "$DOTFILES_GITHUB" "$DOTPATH"
+  if git_works; then
+    git clone --branch "$DOTFILES_BRANCH" --single-branch "$DOTFILES_GITHUB" "$DOTPATH"
+  else
+    tmp_dir="$(mktemp -d)"
+    trap 'rm -rf "$tmp_dir"' EXIT
+    archive="$tmp_dir/dotfiles.tar.gz"
+
+    echo "[*] Git is not available; downloading the dotfiles tarball instead."
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL "$DOTFILES_ARCHIVE_URL" -o "$archive"
+    elif command -v wget >/dev/null 2>&1; then
+      wget -qO "$archive" "$DOTFILES_ARCHIVE_URL"
+    else
+      echo "[-] curl or wget is required to download dotfiles" >&2
+      exit 1
+    fi
+
+    if ! command -v tar >/dev/null 2>&1; then
+      echo "[-] tar is required to extract dotfiles" >&2
+      exit 1
+    fi
+
+    mkdir -p "$DOTPATH"
+    tar -xzf "$archive" -C "$DOTPATH" --strip-components=1
+    rm -rf "$tmp_dir"
+    trap - EXIT
+  fi
 fi
 
 exec bash "$DOTPATH/etc/install" "$@"

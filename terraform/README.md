@@ -21,7 +21,7 @@ terraform apply
 The remote installer wraps that flow:
 
 ```sh
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/install)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)"
 ```
 
 To apply only one part:

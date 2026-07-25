@@ -43,14 +43,17 @@ dotfiles/
 Install with the remote script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/install | bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)"
 ```
 
-The installer checks for the minimum required commands before making changes:
+The bootstrap requires `bash`, `tar`, and either `curl` or `wget`. It downloads
+the repository archive when Git is unavailable. The installer then offers to
+install missing runtime tools through the platform package manager, including:
 
-- `bash`
 - `git`
 - `terraform`
+- `unzip` for the Terraform release archive
+- `ssh-keygen` for the Linux GitHub identity
 - `brew` when Homebrew bundle is enabled
 - `defaults` when macOS defaults are enabled
 
@@ -59,21 +62,25 @@ install it automatically. On macOS it uses Homebrew, installing Homebrew first
 when necessary. On Linux it installs the Terraform release archive into
 `~/.local/bin` when Homebrew is unavailable.
 
-By default it clones this repository to `~/.dotfiles`, initializes Terraform,
+By default it obtains this repository at `~/.dotfiles`, initializes Terraform,
 and applies the modules for symlinks, Homebrew, and macOS defaults.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/install | bash -s -- --plan
-curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/install | bash -s -- --yes
-curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/install | bash -s -- --no-brew
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)" -- --plan
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)" -- --yes
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)" -- --no-brew
 ```
 
 For manual installation:
 
 ```bash
 git clone https://github.com/sskmy1024y/dotfiles.git "$HOME/.dotfiles"
-bash "$HOME/.dotfiles/etc/install"
+cd "$HOME/.dotfiles"
+make install
 ```
+
+`make install` delegates to the same Terraform-based `etc/install` entrypoint.
+Run `make help` to list installation, maintenance, and test commands.
 
 ### Options
 
@@ -111,8 +118,12 @@ terraform apply
 
 ## Testing
 
-The legacy Bats and Docker test suites are still present, but the Makefile
-entrypoint has been removed while the installer migrates to Terraform.
+The Bats and Docker test suites are available through the root Makefile:
+
+```bash
+make bats
+make test-docker
+```
 
 - **Unit Tests (Bats)**: Fast, isolated tests for individual components
   - `test/test_header.bats` - Tests for utility functions

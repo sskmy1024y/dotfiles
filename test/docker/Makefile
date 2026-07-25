@@ -27,7 +27,7 @@ test-ubuntu-remote: ## Test Ubuntu with remote installation
 	OS=ubuntu INSTALL_METHOD=remote docker compose run --rm test
 
 test-ubuntu-local: ## Test Ubuntu with local installation
-	docker compose run --rm ubuntu-local
+	OS=ubuntu docker compose run --rm ubuntu-local
 
 # Arch Linux tests
 test-archlinux: test-archlinux-remote test-archlinux-local ## Run all Arch Linux tests
@@ -36,7 +36,7 @@ test-archlinux-remote: ## Test Arch Linux with remote installation
 	OS=archlinux INSTALL_METHOD=remote docker compose run --rm test
 
 test-archlinux-local: ## Test Arch Linux with local installation
-	docker compose run --rm archlinux-local
+	OS=archlinux docker compose run --rm archlinux-local
 
 # Interactive shell
 shell: ## Start interactive shell for debugging

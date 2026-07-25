@@ -15,3 +15,9 @@ variable "enable_1password_ssh" {
   type        = bool
   default     = true
 }
+
+variable "enable_linux_ssh_identity" {
+  description = "Generate the GitHub SSH identity referenced by git.conf on Linux."
+  type        = bool
+  default     = false
+}
