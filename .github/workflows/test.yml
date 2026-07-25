@@ -132,11 +132,9 @@ jobs:
           ./test/bats-runner test/test_symlink.bats
           ./test/bats-runner test/test_deploy.bats
           
-      - name: Test Makefile targets
+      - name: Test installer entrypoint
         run: |
-          make check
-          make help
-          make test
+          bash etc/install --help
 
   docker-test:
     name: Docker Test - ${{ matrix.os }} - ${{ matrix.install }}
@@ -148,15 +146,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-        
+
       - name: Build test image
         run: |
           cd test/docker
           docker build -f Dockerfile.${{ matrix.os }} -t dotfiles-test:${{ matrix.os }} .
-          
+
       - name: Run installation test with Bats
         run: |
           cd test/docker
@@ -169,6 +167,180 @@ jobs:
             -e DOTFILES_BRANCH="${setup_ref}" \
             -v "${GITHUB_WORKSPACE}:/home/testuser/dotfiles-local:ro" \
             dotfiles-test:${{ matrix.os }} ./test_install.sh ${{ matrix.install }}
+
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      brewfile: ${{ steps.filter.outputs.brewfile }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          # Full history so paths-filter can diff against the push's "before"
+          # commit. With the default shallow clone it cannot find the base
+          # commit and falls back to treating all files as changed, which
+          # always triggers the (slow) brew-bundle job.
+          fetch-depth: 0
+
+      - name: Detect Brewfile changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          # Compare only the commits this push / PR update added (incremental),
+          # not the whole branch against master. github.event.before is the tip
+          # before the push and the previous head on PR "synchronize"; it is
+          # empty on PR "opened", where paths-filter falls back to the PR base.
+          base: ${{ github.event.before }}
+          filters: |
+            brewfile:
+              - 'etc/scripts/install.d/Brewfile'
+
+  macos-install-test:
+    name: macOS Install Test
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Clear conflicting dotfiles
+        run: |
+          for file in .zshrc .gitconfig .gitignore.global .tmux.conf .czrc .goenvrc .ssh/config; do
+            if [ -e "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
+              echo "Moving existing $file to $file.backup"
+              mkdir -p "$(dirname "$HOME/$file.backup")"
+              mv "$HOME/$file" "$HOME/$file.backup"
+            fi
+          done
+
+      - name: Apply installer without brew
+        run: |
+          # On macOS etc/install enables the brew, macos_defaults and
+          # 1password_ssh modules. --no-brew skips only the heavy brew bundle
+          # while still exercising the symlink, macOS-defaults and 1Password
+          # symlink modules plus the Terraform archive-install path.
+          bash etc/install --yes --no-brew
+
+      - name: Expose Terraform on PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Preflight check
+        run: bash etc/install --check
+
+      - name: Verify installation
+        run: |
+          fail=0
+
+          check_symlink() {
+            if [ -L "$1" ]; then
+              echo "✓ symlink: $1 -> $(readlink "$1")"
+            else
+              echo "✗ not a symlink: $1"; fail=1
+            fi
+          }
+
+          check_mode() {
+            local got
+            got="$(stat -f %Lp "$1" 2>/dev/null || echo '??')"
+            if [ "$got" = "$2" ]; then
+              echo "✓ mode $2: $1"
+            else
+              echo "✗ mode $2 expected on $1 (got $got)"; fail=1
+            fi
+          }
+
+          check_default() {
+            local got
+            got="$(defaults read "$1" "$2" 2>/dev/null || echo '??')"
+            if [ "$got" = "$3" ]; then
+              echo "✓ default $2 = $3"
+            else
+              echo "✗ default $2 expected $3 (got $got)"; fail=1
+            fi
+          }
+
+          echo "--- symlinks ---"
+          check_symlink "$HOME/.zshrc"
+          check_symlink "$HOME/.gitconfig"
+          check_symlink "$HOME/.gitignore.global"
+          check_symlink "$HOME/.tmux.conf"
+          check_symlink "$HOME/.local/bin/deploy"
+          check_symlink "$HOME/.ssh/1password.conf"
+
+          echo "--- zsh configs ---"
+          if [ -d "$HOME/.zsh" ]; then
+            zcount="$(find "$HOME/.zsh" -maxdepth 1 -type l -name '*.zsh' | wc -l | tr -d ' ')"
+            if [ "$zcount" -gt 0 ]; then
+              echo "✓ $zcount zsh symlinks"
+            else
+              echo "✗ no zsh symlinks under ~/.zsh"; fail=1
+            fi
+          else
+            echo "✗ ~/.zsh directory missing"; fail=1
+          fi
+
+          echo "--- ssh permissions ---"
+          check_mode "$HOME/.ssh" 700
+          if [ -e "$HOME/.ssh/authorized_keys" ]; then
+            check_mode "$HOME/.ssh/authorized_keys" 600
+          else
+            echo "✗ ~/.ssh/authorized_keys missing"; fail=1
+          fi
+
+          echo "--- terraform ---"
+          if command -v terraform >/dev/null 2>&1; then
+            echo "✓ terraform: $(command -v terraform)"
+          else
+            echo "✗ terraform not found on PATH"; fail=1
+          fi
+
+          echo "--- macOS defaults (runtime) ---"
+          check_default -g InitialKeyRepeat 10
+          check_default -g KeyRepeat 2
+          check_default -g ApplePressAndHoldEnabled 0
+
+          exit "$fail"
+
+      - name: Installer help
+        run: bash etc/install --help
+
+  macos-brew-test:
+    name: macOS Brew Bundle Test
+    needs: detect-changes
+    if: needs.detect-changes.outputs.brewfile == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Clear conflicting dotfiles
+        run: |
+          for file in .zshrc .gitconfig .gitignore.global .tmux.conf .czrc .goenvrc .ssh/config; do
+            if [ -e "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
+              echo "Moving existing $file to $file.backup"
+              mkdir -p "$(dirname "$HOME/$file.backup")"
+              mv "$HOME/$file" "$HOME/$file.backup"
+            fi
+          done
+
+      - name: Apply installer with brew bundle
+        run: |
+          # Full apply: the Terraform brew module runs
+          # `brew bundle --file etc/scripts/install.d/Brewfile` (the real
+          # production path). Gated to Brewfile changes / manual runs because
+          # it pulls heavy GUI casks (docker-desktop, gcloud-cli, fonts).
+          bash etc/install --yes
+
+      - name: Verify a representative formula
+        run: |
+          if brew list jq >/dev/null 2>&1; then
+            echo "✓ jq installed via brew bundle"
+          else
+            echo "✗ jq not installed by brew bundle"; exit 1
+          fi
 
   syntax-check:
     name: Syntax and Linting
@@ -188,6 +360,9 @@ jobs:
             echo "Checking: $script"
             bash -n "$script"
           done
+          bash -n etc/install
+          bash -n etc/bootstrap
+          bash -n etc/setup
           
       - name: Run ShellCheck
         run: |
@@ -204,17 +379,22 @@ jobs:
 
   all-tests-summary:
     name: All Tests Summary
-    needs: [bats-tests, individual-bats-tests, integration-test, docker-test, syntax-check]
+    needs: [bats-tests, individual-bats-tests, integration-test, docker-test, syntax-check, macos-install-test, macos-brew-test]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check test results
         run: |
+          # macos-brew-test is skipped unless the Brewfile changed (or the run
+          # was manually dispatched), so "skipped" counts as a pass for it.
+          brew_result="${{ needs.macos-brew-test.result }}"
           if [ "${{ needs.bats-tests.result }}" != "success" ] || \
              [ "${{ needs.individual-bats-tests.result }}" != "success" ] || \
              [ "${{ needs.integration-test.result }}" != "success" ] || \
              [ "${{ needs.docker-test.result }}" != "success" ] || \
-             [ "${{ needs.syntax-check.result }}" != "success" ]; then
+             [ "${{ needs.syntax-check.result }}" != "success" ] || \
+             [ "${{ needs.macos-install-test.result }}" != "success" ] || \
+             { [ "$brew_result" != "success" ] && [ "$brew_result" != "skipped" ]; }; then
             echo "Some tests failed!"
             exit 1
           else

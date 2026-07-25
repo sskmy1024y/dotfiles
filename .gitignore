@@ -13,6 +13,12 @@ config/gcloud/configurations.tsv
 tmp
 out
 gen
+**/.terraform/
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/terraform.tfstate.*.backup
+crash.log
+crash.*.log
 
 # macOS
 .DS_Store

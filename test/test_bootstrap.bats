@@ -20,23 +20,28 @@ write_mock_git_clone() {
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ "${1:-}" = "--version" ]; then
+  echo "git version 2.0.0"
+  exit 0
+fi
+
 last=""
 for arg in "$@"; do
   last="$arg"
 done
 
 mkdir -p "$last/etc"
-cat > "$last/etc/setup" <<'SETUP'
+    cat > "$last/etc/install" <<'INSTALL'
 #!/usr/bin/env bash
-printf 'setup:%s\n' "$*" > "$BOOTSTRAP_MARKER"
+printf 'install:%s\n' "$*" > "$BOOTSTRAP_MARKER"
 printf 'branch:%s\n' "${DOTFILES_BRANCH:-}" >> "$BOOTSTRAP_MARKER"
-SETUP
+INSTALL
 EOF
     chmod +x "$mock_dir/git"
     export PATH="$mock_dir:$PATH"
 }
 
-@test "bootstrap clones requested branch and delegates to setup" {
+@test "bootstrap clones requested branch and delegates to install" {
     write_mock_git_clone
 
     export HOME="$TEST_TEMP_DIR/home"
@@ -45,12 +50,12 @@ EOF
     export DOTFILES_BRANCH="feature/bootstrap"
     export BOOTSTRAP_MARKER="$TEST_TEMP_DIR/marker"
 
-    run bash "$DOTPATH_SOURCE/etc/bootstrap" init
+    run bash "$DOTPATH_SOURCE/etc/bootstrap" --check
 
     assert_success
-    assert_file_exists "$DOTPATH/etc/setup"
+    assert_file_exists "$DOTPATH/etc/install"
     assert_file_exists "$BOOTSTRAP_MARKER"
-    assert_file_contains "$BOOTSTRAP_MARKER" "setup:init"
+    assert_file_contains "$BOOTSTRAP_MARKER" "install:--check"
     assert_file_contains "$BOOTSTRAP_MARKER" "branch:feature/bootstrap"
 }
 
@@ -69,13 +74,59 @@ EOF
     export DOTPATH="$TEST_TEMP_DIR/home/.dotfiles"
     export BOOTSTRAP_MARKER="$TEST_TEMP_DIR/marker"
     mkdir -p "$DOTPATH/etc"
-    cat > "$DOTPATH/etc/setup" <<'SETUP'
+    cat > "$DOTPATH/etc/install" <<'INSTALL'
 #!/usr/bin/env bash
 printf 'existing:%s\n' "$*" > "$BOOTSTRAP_MARKER"
-SETUP
+INSTALL
 
-    run bash "$DOTPATH_SOURCE/etc/bootstrap" deploy
+    run bash "$DOTPATH_SOURCE/etc/bootstrap" --check
 
     assert_success
-    assert_file_contains "$BOOTSTRAP_MARKER" "existing:deploy"
+    assert_file_contains "$BOOTSTRAP_MARKER" "existing:--check"
+}
+
+@test "bootstrap uses a tarball when git exists but is not functional" {
+    local mock_dir="$TEST_TEMP_DIR/mocks"
+    local fixture_dir="$TEST_TEMP_DIR/dotfiles-feature-bootstrap"
+    local fixture_archive="$TEST_TEMP_DIR/dotfiles.tar.gz"
+    mkdir -p "$mock_dir" "$fixture_dir/etc"
+
+    cat > "$mock_dir/git" <<'EOF'
+#!/usr/bin/env bash
+exit 1
+EOF
+    cat > "$mock_dir/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+output=""
+while [ "$#" -gt 0 ]; do
+  if [ "$1" = "-o" ]; then
+    output="$2"
+    shift 2
+  else
+    shift
+  fi
+done
+cp "$BOOTSTRAP_FIXTURE" "$output"
+EOF
+    cat > "$fixture_dir/etc/install" <<'EOF'
+#!/usr/bin/env bash
+printf 'archive:%s\n' "$*" > "$BOOTSTRAP_MARKER"
+EOF
+    chmod +x "$mock_dir/git" "$mock_dir/curl" "$fixture_dir/etc/install"
+    tar -czf "$fixture_archive" -C "$TEST_TEMP_DIR" "$(basename "$fixture_dir")"
+
+    export PATH="$mock_dir:$PATH"
+    export HOME="$TEST_TEMP_DIR/home"
+    export DOTPATH="$TEST_TEMP_DIR/home/.dotfiles"
+    export DOTFILES_ARCHIVE_URL="https://example.invalid/dotfiles.tar.gz"
+    export BOOTSTRAP_FIXTURE="$fixture_archive"
+    export BOOTSTRAP_MARKER="$TEST_TEMP_DIR/marker"
+
+    run bash "$DOTPATH_SOURCE/etc/bootstrap" --check
+
+    assert_success
+    assert_file_exists "$DOTPATH/etc/install"
+    assert_file_contains "$BOOTSTRAP_MARKER" "archive:--check"
+    assert_output --partial "Git is not available"
 }

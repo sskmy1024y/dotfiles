@@ -5,23 +5,23 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 ## Common Commands
 
 ### Makefile Commands
-- `make install` - Complete setup (deploy + init)
-- `make deploy` - Create symbolic links to home directory
-- `make init` - Install packages and setup environment
+- `make install` - Run the Terraform-based installer
+- `make deploy` - Apply links without Homebrew or macOS defaults
+- `make init` - Run the legacy numbered package installers
 - `make deep` - Install advanced tools and fonts
 - `make update` - Update dotfiles from repository
-- `make clean` - Remove dotfiles and repository
+- `make clean` - Destroy Terraform-managed configuration while keeping the repository
 - `make help` - Show all available commands
 
 ### Installation Methods
 1. **One-liner remote install:**
    ```bash
-   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/setup)"
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)"
    ```
 
 2. **With package installation:**
    ```bash
-   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/setup)" -s init
+   bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)" -- --yes
    ```
 
 3. **Manual clone and install:**
@@ -60,7 +60,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 1. `deploy` creates symlinks. **TPM (tmux plugin manager) clone is deferred** here if `git` is missing — it runs later from `install.d/30_tmux.sh` after git is installed via brew.
 2. `init` runs `install.d/*.sh` in numeric order. On macOS this means `00_package.sh` ensures Xcode CLT + brew + core packages, `10_brew.sh` applies the `Brewfile`, then `30_tmux.sh` clones TPM.
 
-The one-liner `etc/setup` downloads the GitHub **tarball** (`master.tar.gz`) — NOT the zip — so it can be piped straight into `tar xz` without needing `unzip` on a fresh macOS.
+The one-liner `etc/bootstrap` downloads the GitHub **tarball** (`master.tar.gz`) — NOT the zip — so it can be piped straight into `tar xz` without needing `unzip` on a fresh macOS.
 
 ### `make deep` notes (macOS)
 - `make deep` runs `etc/scripts/deep.d/*.sh` via `find | sort | bash`. Bash reads each filename from stdin as a command; non-zero exit from an early script does **not** stop later scripts, but the LAST script's exit code is what `make` sees.
@@ -76,15 +76,15 @@ The one-liner `etc/setup` downloads the GitHub **tarball** (`master.tar.gz`) —
 
 ### Installation Flow
 1. Clone repository to `~/.dotfiles`
-2. Run `make deploy` to create symbolic links
-3. Run `make init` to install packages via numbered scripts in `install.d/`
+2. Run `make install` to apply the Terraform-managed configuration
+3. Optional: Run `make init` for the legacy numbered package installers
 4. Optional: Run `make deep` for advanced tools and fonts
 
 ## Testing Requirements
 
 ### After Making Changes
 - **Always run tests after modifying files**: Execute both `make bats` and `make test-docker` to ensure changes don't break existing functionality
-- `make test-bats` - Runs Bats test suite for shell scripts
+- `make bats` / `make test-bats` - Runs the local Bats test suite
 - `make test-docker` - Tests deployment in Docker containers for different Linux distributions
 
 ### Test Infrastructure Layout

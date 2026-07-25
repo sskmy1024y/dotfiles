@@ -196,8 +196,10 @@ find_shell_scripts() {
     # Check each script
     for script in "${scripts[@]}"; do
         if grep -q "/Users/\|/home/" "$script" 2>/dev/null; then
-            # Allow specific exceptions (like in test files or comments)
-            if ! grep -v "^#" "$script" | grep -q "/Users/\|/home/"; then
+            # Allow specific exceptions: comments, and the Linuxbrew prefix
+            # (/home/linuxbrew/.linuxbrew) which is a fixed system-wide install
+            # location rather than a hardcoded user home directory.
+            if ! grep -v "^#" "$script" | grep -v "/home/linuxbrew/" | grep -q "/Users/\|/home/"; then
                 continue
             fi
             echo "Hardcoded path in: ${script#$DOTPATH/}"
@@ -208,20 +210,11 @@ find_shell_scripts() {
     [ $found -eq 0 ]
 }
 
-# Test Makefile
-@test "Makefile has valid syntax" {
-    run make -n check
+# Test installer
+@test "installer help works" {
+    run bash "$DOTPATH/etc/install" --help
     assert_success
-}
-
-@test "Makefile help target exists" {
-    run make -n help
-    assert_success
-}
-
-@test "Makefile test target exists" {
-    run make -n test
-    assert_success
+    assert_output --partial "Usage: install"
 }
 
 # Test for consistent file permissions
@@ -229,6 +222,7 @@ find_shell_scripts() {
     local scripts=(
         "$DOTPATH/etc/scripts/deploy"
         "$DOTPATH/etc/scripts/init"
+        "$DOTPATH/etc/install"
         "$DOTPATH/etc/setup"
         "$DOTPATH/etc/bootstrap"
         "$DOTPATH/test/install_bats.sh"

@@ -105,6 +105,8 @@ vm_wait_ssh() {
           -o ConnectTimeout=3 \
           -o StrictHostKeyChecking=no \
           -o UserKnownHostsFile=/dev/null \
+          -o PubkeyAuthentication=no \
+          -o IdentitiesOnly=yes \
           -o LogLevel=ERROR \
           "${TART_SSH_USER}@${ip}" true 2>/dev/null; then
         info "VM '${name}' is up at ${ip}" >&2
@@ -126,6 +128,8 @@ vm_exec() {
   sshpass -p "$TART_SSH_PASS" ssh \
     -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null \
+    -o PubkeyAuthentication=no \
+    -o IdentitiesOnly=yes \
     -o LogLevel=ERROR \
     "${TART_SSH_USER}@${ip}" "$@"
 }
@@ -224,7 +228,7 @@ EOF
 vm_push() {
   local ip="$1" src="$2" dst="$3"
   sshpass -p "$TART_SSH_PASS" rsync -az --delete \
-    -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR" \
+    -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -o IdentitiesOnly=yes -o LogLevel=ERROR" \
     "$src" "${TART_SSH_USER}@${ip}:${dst}"
 }
 
@@ -238,7 +242,7 @@ vm_push_repo() {
     --exclude '.git' \
     --exclude 'test/bats' \
     --exclude 'test/tart' \
-    -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR" \
+    -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PubkeyAuthentication=no -o IdentitiesOnly=yes -o LogLevel=ERROR" \
     "${src%/}/" "${TART_SSH_USER}@${ip}:${dst%/}/"
 }
 

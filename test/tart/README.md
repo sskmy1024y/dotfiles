@@ -34,28 +34,29 @@ make -C test/tart check
 
 ```sh
 # 1. First-time only: pull vanilla image and create the long-lived base VM
-make test-mac-tart-prepare
+make -C test/tart prepare
 
-# 2. Reproduce the curl one-liner problem on real macOS
-make test-mac-tart-oneliner
+# 2. Push this local working tree and run etc/install --plan
+make -C test/tart install-plan
 
-# 3. Reproduce the "git not installed" problem
-make test-mac-tart-git
+# 3. Push this local working tree and apply with etc/install --yes
+make -C test/tart install-local
 
-# 4. Run the full pipeline (deploy + init + deep)
-make test-mac-tart-full
+# 4. Run the full Terraform installer scenario
+make -C test/tart full
 
 # 5. Interactive debugging — drop into SSH on a fresh VM
-make test-mac-tart-shell
+make -C test/tart shell
 
 # 6. Clean up ephemeral VMs (base stays)
-make test-mac-tart-clean
+make -C test/tart clean
 ```
 
-All `test-mac-tart-*` Makefile targets at the repo root forward to
-`test/tart/Makefile`. You can also invoke that Makefile directly:
+The root Makefile has been removed. Invoke the Tart harness directly:
 
 ```sh
+make -C test/tart install-plan
+make -C test/tart install-local
 make -C test/tart oneliner
 make -C test/tart shell
 make -C test/tart clean
@@ -78,8 +79,8 @@ test/tart/
 │   └── tart-destroy      bulk-delete ephemeral VMs         (housekeeping)
 └── scenarios/
     ├── 01-oneliner-remote.sh   curl ... | bash
-    ├── 02-git-clone-local.sh   rsync local repo + make install
-    └── 03-full-install.sh      deploy + init + deep
+    ├── 02-git-clone-local.sh   rsync local repo + etc/install
+    └── 03-full-install.sh      full Terraform install via etc/install
 ```
 
 `tart-run` always:
@@ -111,24 +112,25 @@ The typical loop while fixing the installer:
 
 ```sh
 # 0. (once) prepare the base VM
-make test-mac-tart-prepare
+make -C test/tart prepare
 
-# 1. edit etc/scripts/... on the host
+# 1. edit etc/install, terraform/..., or config files on the host
 
 # 2. push & test (rsync handles incremental copy)
-make test-mac-tart-git           # uses YOUR local copy of the repo
+make -C test/tart install-plan   # uses YOUR local copy of the repo
+make -C test/tart install-local  # applies with YOUR local copy
 
 # 3. if it fails, drop into the same kind of VM and poke around
-make test-mac-tart-shell
+make -C test/tart shell
 
 # 4. repeat from step 1
 ```
 
-`make test-mac-tart-git` and `make test-mac-tart-full` rsync your working
+`make -C test/tart install-local` and `make -C test/tart full` rsync your working
 tree (including uncommitted changes) into the VM, so you do not need to
 push to GitHub between iterations.
 
-`make test-mac-tart-oneliner` always tests the **published** master branch
+`make -C test/tart oneliner` always tests the **published** master branch
 (the URL is hardcoded to `raw.githubusercontent.com/sskmy1024y/dotfiles/master`).
 That scenario only becomes meaningful once your fix is committed and pushed.
 
@@ -137,13 +139,13 @@ That scenario only becomes meaningful once your fix is committed and pushed.
 ## Keeping a VM around for inspection
 
 ```sh
-make -C test/tart keep-git-clone   # VM survives the run
+make -C test/tart keep-install-local   # VM survives the run
 tart list                          # find its name (dotfiles-test-...)
 tart ip <name>                     # get its IP
 sshpass -p admin ssh admin@<ip>    # log in
 
 # When done:
-make test-mac-tart-clean           # nukes every dotfiles-test-* VM
+make -C test/tart clean           # nukes every dotfiles-test-* VM
 ```
 
 ---
@@ -165,7 +167,7 @@ Example:
 
 ```sh
 ONELINER_URL=https://raw.githubusercontent.com/sskmy1024y/dotfiles/refs/heads/feat/fix-install/etc/bootstrap \
-  make test-mac-tart-oneliner
+  make -C test/tart oneliner
 ```
 
 ---
@@ -182,18 +184,18 @@ First boot of a brand-new macOS install can take longer than the default
 300 s. Re-run with `TART_SSH_TIMEOUT=900`.
 
 **`VM 'dotfiles-base' is missing`**
-Run `make test-mac-tart-prepare` first.
+Run `make -C test/tart prepare` first.
 
 **`sshpass: not found`**
 `brew install hudochenkov/sshpass/sshpass` (the original `sshpass` is not
 in the default Homebrew tap).
 
 **A previous run left VMs behind**
-`make test-mac-tart-clean` removes every `dotfiles-test-*` VM. `tart list`
+`make -C test/tart clean` removes every `dotfiles-test-*` VM. `tart list`
 shows what is currently on disk.
 
 **I want to start completely over**
-`make test-mac-tart-clean-all` removes ephemeral VMs AND the base VM.
+`make -C test/tart clean-all` removes ephemeral VMs AND the base VM.
 You will need `prepare` again afterwards.
 
 ---

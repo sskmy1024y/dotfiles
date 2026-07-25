@@ -1,111 +1,104 @@
-DOTPATH    := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
-CANDIDATES := $(wildcard .??*) bin config
-EXCLUSIONS := .DS_Store .git .github .gitignore .vscode
-DOTFILES   := $(filter-out $(EXCLUSIONS), $(CANDIDATES))
+DOTPATH := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 .DEFAULT_GOAL := help
 
-.PHONY: test
+.PHONY: all install deploy init deep update check clean plan \
+	test bats test-bats test-rebuild test-docker test-docker-all \
+	test-docker-ubuntu test-docker-archlinux test-bats-docker \
+	test-bats-ubuntu test-bats-archlinux test-bats-ci test-mac-local \
+	test-mac-tart-check test-mac-tart-prepare test-mac-tart-oneliner \
+	test-mac-tart-git test-mac-tart-full test-mac-tart-shell \
+	test-mac-tart-clean test-mac-tart-clean-all help
 
-all:
+all: install
 
-init: ## Setup environment settings
-	@echo '==> Start to install app using pkg manager.'
-	@echo ''
+install: ## Run the Terraform-based dotfiles installer
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install
+
+deploy: ## Apply dotfile links without Homebrew or macOS defaults
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install --no-brew --no-macos-defaults
+
+plan: ## Preview Terraform-managed dotfile changes
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install --plan
+
+check: ## Check installer requirements without making changes
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install --check
+
+init: ## Run the legacy package and environment installers
 	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/scripts/init
 
-update: ## Fetch changes for this repo
-	git pull origin master
-
-deploy: ## Create symlink to home directory
-	@echo '==> Start to deploy dotfiles to home directory.'
-	@echo ''
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/scripts/deploy
-
-deep: ## Setup more finicky settings
-	@echo '==> Start to install a variety of tools.'
-	@echo ''
+deep: ## Install optional applications, settings, and fonts
 	@find $(DOTPATH)/etc/scripts/deep.d -name "[0-9][0-9]*.sh" | sort | bash
 
-install: deploy init ## Run make deploy, init
-	@exec $$SHELL
+update: ## Fetch changes for this repository
+	@git pull --ff-only
 
-check: ## Check if it is ready to install
-	@echo 'PATH:' $(DOTPATH)
-	@echo 'TARGET:' $(DOTFILES)
+clean: ## Destroy Terraform-managed links and settings (keeps the repository)
+	@command -v terraform >/dev/null 2>&1 || { echo 'terraform: command not found' >&2; exit 1; }
+	@terraform -chdir=$(DOTPATH)/terraform destroy
 
-clean: ## Remove dotfiles and this repo
-	@echo 'Remove dot files in your home directory...'
-	@-$(foreach val, $(DOTFILES), rm -vrf $(HOME)/$(val);)
-	-rm -rf $(DOTPATH)
+test: ## Run the local Bats test suite
+	@bash $(DOTPATH)/test/run_tests.sh --ci
 
-test: ## Run test suite
-	@echo '==> Running test suite'
-	@bash $(DOTPATH)/test/run_tests.sh
+bats: test ## Alias for the local Bats test suite
 
-test-rebuild: ## Rebuild Docker images and run tests
-	@echo '==> Rebuilding Docker images and running tests'
-	@cd $(DOTPATH)/test/docker && $(MAKE) build-clean
+test-bats: test ## Alias for the local Bats test suite
 
-test-docker: ## Run Docker-based tests
-	@echo '==> Running Docker tests'
-	@cd $(DOTPATH)/test/docker && $(MAKE) test-all
+test-rebuild: ## Rebuild Docker images without cache
+	@$(MAKE) -C $(DOTPATH)/test/docker build-clean
 
-test-docker-ubuntu: ## Run Docker tests for Ubuntu
-	@echo '==> Running Docker tests for Ubuntu'
-	@cd $(DOTPATH)/test/docker && $(MAKE) test-ubuntu
+test-docker: ## Test the current working tree on Ubuntu and Arch Linux
+	@$(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local test-archlinux-local
 
-test-docker-archlinux: ## Run Docker tests for Arch Linux
-	@echo '==> Running Docker tests for Arch Linux'
-	@cd $(DOTPATH)/test/docker && $(MAKE) test-archlinux
+test-docker-all: ## Run local and remote Docker tests on both Linux distributions
+	@$(MAKE) -C $(DOTPATH)/test/docker test-all
 
-test-bats: ## Run Bats tests in Docker (both Ubuntu and Arch Linux)
-	@echo '==> Running Bats tests in Docker'
-	@cd $(DOTPATH)/test/docker && $(MAKE) bats
+test-docker-ubuntu: ## Test the current working tree on Ubuntu
+	@$(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local
 
-test-bats-ubuntu: ## Run Bats tests in Docker (Ubuntu only)
-	@echo '==> Running Bats tests in Ubuntu Docker'
-	@cd $(DOTPATH)/test/docker && $(MAKE) bats-ubuntu
+test-docker-archlinux: ## Test the current working tree on Arch Linux
+	@$(MAKE) -C $(DOTPATH)/test/docker test-archlinux-local
 
-test-bats-archlinux: ## Run Bats tests in Docker (Arch Linux only)
-	@echo '==> Running Bats tests in Arch Linux Docker'
-	@cd $(DOTPATH)/test/docker && $(MAKE) bats-archlinux
+test-bats-docker: ## Run Bats in Ubuntu and Arch Linux containers
+	@$(MAKE) -C $(DOTPATH)/test/docker bats
 
-test-bats-ci: ## Run Bats tests in Docker CI mode (both OS)
-	@echo '==> Running Bats tests in Docker (CI mode)'
-	@cd $(DOTPATH)/test/docker && $(MAKE) bats-ci
+test-bats-ubuntu: ## Run Bats in an Ubuntu container
+	@$(MAKE) -C $(DOTPATH)/test/docker bats-ubuntu
 
-test-mac-local: ## Run tests in macOS Docker container (fake macOS; smoke only)
-	@echo '==> Running tests in macOS Docker container'
-	@cd $(DOTPATH)/test/docker && $(MAKE) test-mac-local
+test-bats-archlinux: ## Run Bats in an Arch Linux container
+	@$(MAKE) -C $(DOTPATH)/test/docker bats-archlinux
 
-# ---------- Real macOS testing via Tart (Apple Silicon host required) ----------
+test-bats-ci: ## Run Bats in CI mode in both Linux containers
+	@$(MAKE) -C $(DOTPATH)/test/docker bats-ci
+
+test-mac-local: ## Run the fake-macOS Docker smoke test
+	@$(MAKE) -C $(DOTPATH)/test/docker test-mac-local
 
 test-mac-tart-check: ## Verify Tart and its dependencies are installed
-	@cd $(DOTPATH)/test/tart && $(MAKE) check
+	@$(MAKE) -C $(DOTPATH)/test/tart check
 
-test-mac-tart-prepare: ## Pull vanilla macOS image and create base VM (first-time, 30-60 min)
-	@cd $(DOTPATH)/test/tart && $(MAKE) prepare
+test-mac-tart-prepare: ## Prepare the vanilla macOS Tart base VM
+	@$(MAKE) -C $(DOTPATH)/test/tart prepare
 
-test-mac-tart-oneliner: ## Tart scenario: curl one-liner against fresh macOS
-	@cd $(DOTPATH)/test/tart && $(MAKE) oneliner
+test-mac-tart-oneliner: ## Test the remote one-liner in a clean macOS VM
+	@$(MAKE) -C $(DOTPATH)/test/tart oneliner
 
-test-mac-tart-git: ## Tart scenario: local repo + make install on fresh macOS
-	@cd $(DOTPATH)/test/tart && $(MAKE) git-clone
+test-mac-tart-git: ## Test the local working tree in a clean macOS VM
+	@$(MAKE) -C $(DOTPATH)/test/tart git-clone
 
-test-mac-tart-full: ## Tart scenario: full deploy + init + deep on fresh macOS
-	@cd $(DOTPATH)/test/tart && $(MAKE) full
+test-mac-tart-full: ## Test the full Terraform installer in a clean macOS VM
+	@$(MAKE) -C $(DOTPATH)/test/tart full
 
-test-mac-tart-shell: ## Boot a fresh Tart VM and open an SSH shell (debug)
-	@cd $(DOTPATH)/test/tart && $(MAKE) shell
+test-mac-tart-shell: ## Open a shell in a fresh macOS Tart VM
+	@$(MAKE) -C $(DOTPATH)/test/tart shell
 
-test-mac-tart-clean: ## Destroy ephemeral Tart test VMs (keeps base)
-	@cd $(DOTPATH)/test/tart && $(MAKE) clean
+test-mac-tart-clean: ## Destroy ephemeral Tart VMs
+	@$(MAKE) -C $(DOTPATH)/test/tart clean
 
-test-mac-tart-clean-all: ## Destroy all Tart VMs including the base
-	@cd $(DOTPATH)/test/tart && $(MAKE) clean-all
+test-mac-tart-clean-all: ## Destroy all Tart VMs, including the base
+	@$(MAKE) -C $(DOTPATH)/test/tart clean-all
 
-help: ## Self-documented Makefile
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+help: ## Show available commands
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| sort \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

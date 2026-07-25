@@ -1,75 +1,78 @@
 #!/usr/bin/env bash
 
 # Author: sskmy1024y
-# Last Modified: 12 Jun 2026.
+# Description: Remote one-liner entrypoint. Downloads the repository if needed,
+#              then delegates to etc/install. Git is intentionally optional so
+#              this also works before Xcode CLT is installed on macOS.
 
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
 
-if [ -z "${DOTPATH:-}" ]; then
-    DOTPATH=$HOME/.dotfiles; export DOTPATH
-fi
-
+: "${DOTPATH:=$HOME/.dotfiles}"
 : "${DOTFILES_GITHUB:=https://github.com/sskmy1024y/dotfiles.git}"
 : "${DOTFILES_BRANCH:=master}"
-export DOTFILES_GITHUB DOTFILES_BRANCH
 
-info() { echo "[+] $*"; }
-warn() { echo "[*] $*"; }
-error() { echo "[-] $*" >&2; }
-is_exists() { command -v "$1" >/dev/null 2>&1; }
-
-github_archive_url() {
-  local repo_slug
-  case "$DOTFILES_GITHUB" in
-    https://github.com/*.git)
-      repo_slug="${DOTFILES_GITHUB#https://github.com/}"
-      repo_slug="${repo_slug%.git}"
+# Normalize an SSH-form remote (git@host:owner/repo or ssh://git@host/owner/repo)
+# to https:// so the archive download URL below is always a valid https URL.
+normalize_git_https() {
+  case "$1" in
+    git@*:*)
+      local rest="${1#git@}"
+      echo "https://${rest%%:*}/${rest#*:}"
       ;;
-    git@github.com:*.git)
-      repo_slug="${DOTFILES_GITHUB#git@github.com:}"
-      repo_slug="${repo_slug%.git}"
+    ssh://git@*)
+      echo "https://${1#ssh://git@}"
       ;;
     *)
-      repo_slug="sskmy1024y/dotfiles"
+      echo "$1"
       ;;
   esac
-  echo "https://github.com/${repo_slug}/archive/refs/heads/${DOTFILES_BRANCH}.tar.gz"
 }
 
-download_dotfiles() {
-  if [ -d "$DOTPATH" ]; then
-    warn "Dotfiles are already installed"
-    return 0
+: "${DOTFILES_ARCHIVE_URL:=$(normalize_git_https "${DOTFILES_GITHUB%.git}")/archive/refs/heads/${DOTFILES_BRANCH}.tar.gz}"
+export DOTPATH DOTFILES_GITHUB DOTFILES_BRANCH
+
+git_works() {
+  command -v git >/dev/null 2>&1 || return 1
+  if [ "$(uname -s 2>/dev/null || true)" = "Darwin" ] && command -v xcode-select >/dev/null 2>&1; then
+    xcode-select -p >/dev/null 2>&1 || return 1
+  fi
+  git --version >/dev/null 2>&1
+}
+
+if [ ! -f "$DOTPATH/etc/install" ]; then
+  if [ -e "$DOTPATH" ]; then
+    echo "[-] $DOTPATH exists but $DOTPATH/etc/install is not found" >&2
+    exit 1
   fi
 
-  info "Downloading dotfiles..."
-  if is_exists "git"; then
+  if git_works; then
     git clone --branch "$DOTFILES_BRANCH" --single-branch "$DOTFILES_GITHUB" "$DOTPATH"
-    return 0
-  fi
-
-  if ! is_exists "curl" && ! is_exists "wget"; then
-    error "git, curl, or wget required"
-    exit 1
-  fi
-
-  local tarball_url
-  tarball_url="${DOTFILES_TARBALL_URL:-$(github_archive_url)}"
-  mkdir -p "$DOTPATH"
-
-  if is_exists "curl"; then
-    curl -fsSL "$tarball_url" | tar xz --strip-components=1 -C "$DOTPATH"
   else
-    wget -qO- "$tarball_url" | tar xz --strip-components=1 -C "$DOTPATH"
-  fi
+    tmp_dir="$(mktemp -d)"
+    trap 'rm -rf "$tmp_dir"' EXIT
+    archive="$tmp_dir/dotfiles.tar.gz"
 
-  if [ ! -f "$DOTPATH/etc/setup" ]; then
-    error "etc/setup: not found after extracting ${tarball_url}"
-    exit 1
-  fi
-}
+    echo "[*] Git is not available; downloading the dotfiles tarball instead."
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL "$DOTFILES_ARCHIVE_URL" -o "$archive"
+    elif command -v wget >/dev/null 2>&1; then
+      wget -qO "$archive" "$DOTFILES_ARCHIVE_URL"
+    else
+      echo "[-] curl or wget is required to download dotfiles" >&2
+      exit 1
+    fi
 
-download_dotfiles
-cd "$DOTPATH"
-exec bash "$DOTPATH/etc/setup" "$@"
+    if ! command -v tar >/dev/null 2>&1; then
+      echo "[-] tar is required to extract dotfiles" >&2
+      exit 1
+    fi
+
+    mkdir -p "$DOTPATH"
+    tar -xzf "$archive" -C "$DOTPATH" --strip-components=1
+    rm -rf "$tmp_dir"
+    trap - EXIT
+  fi
+fi
+
+exec bash "$DOTPATH/etc/install" "$@"

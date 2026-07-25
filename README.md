@@ -15,7 +15,7 @@ This is a repository with my configuration files, those are verified on Linux / 
 Author: sskmy1024y  
 Date: 2/Jul/2025 
 
-## 📂 Directory structure
+## Directory structure
 
 ```sh
 dotfiles/
@@ -29,101 +29,101 @@ dotfiles/
  │   └── zsh         # Zsh shell configuration
  ├── doc/            # Document files
  ├── etc/
- │   ├── lib         # Library scripts
- │   └── scripts     # Setup & Install scripts
- │       ├── deep.d  # Advanced setup scripts
- │       └── install.d # Package installation scripts
+ │   ├── install     # Remote installer
+ │   └── scripts     # Legacy helpers and Brewfile
+ ├── terraform/      # Terraform entrypoint and modules
  ├── test/           # Test suite
  │   ├── bats        # Bats testing framework
  │   ├── docker      # Docker test environments
  │   └── *.bats      # Test files
- └── Makefile
 ```
 
-## 📦 Setup
+## Setup
 
-Just copy and execute this !!!
+Install with the remote script:
 
 ```bash
-$ bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)"
 ```
 
-If you want to install a [dev-packages](https://github.com/takuzoo3868/dotfiles/tree/master/etc/scripts/install.d), add `init` as an optional argument.
+The bootstrap requires `bash`, `tar`, and either `curl` or `wget`. It downloads
+the repository archive when Git is unavailable. The installer then offers to
+install missing runtime tools through the platform package manager, including:
+
+- `git`
+- `terraform`
+- `unzip` for the Terraform release archive
+- `ssh-keygen` for the Linux GitHub identity
+- `brew` when Homebrew bundle is enabled
+- `defaults` when macOS defaults are enabled
+
+If `terraform` is missing during a normal install, the installer attempts to
+install it automatically. On macOS it uses Homebrew, installing Homebrew first
+when necessary. On Linux it installs the Terraform release archive into
+`~/.local/bin` when Homebrew is unavailable.
+
+By default it obtains this repository at `~/.dotfiles`, initializes Terraform,
+and applies the modules for symlinks, Homebrew, and macOS defaults.
 
 ```bash
-$ bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)" -s init
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)" -- --plan
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)" -- --yes
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)" -- --no-brew
 ```
 
-### Setup using Makefile
+For manual installation:
 
 ```bash
-$ git clone https://github.com/sskmy1024y/dotfiles.git $HOME/.dotfiles
-$ cd $HOME/.dotfiles
-$ make install
+git clone https://github.com/sskmy1024y/dotfiles.git "$HOME/.dotfiles"
+cd "$HOME/.dotfiles"
+make install
 ```
 
-Incidentally, `make install` will perform the following tasks.
+`make install` delegates to the same Terraform-based `etc/install` entrypoint.
+Run `make help` to list installation, maintenance, and test commands.
 
-*   `make deploy` Deploying dotfiles to home directory (creating symlinks)
-*   `make init` Installing packages and setting up environment
-
-### Available Commands
+### Options
 
 ```bash
-$ make help  # Show all available commands
+--plan                 Run terraform plan only
+--check                Check commands and repository presence only
+--yes                  Apply without an interactive confirmation
+--no-brew              Do not run brew bundle
+--no-macos-defaults    Do not write macOS defaults
+--no-1password-ssh     Do not link 1Password SSH config
 ```
 
-| Command | Description |
-|---------|-------------|
-| `make install` | Run make deploy, init |
-| `make deploy` | Create symlink to home directory |
-| `make init` | Setup environment settings |
-| `make update` | Fetch changes for this repo |
-| `make deep` | Setup more finicky settings (fonts, advanced tools) |
-| `make clean` | Remove dotfiles and this repo |
-| `make check` | Check if it is ready to install |
+### Environment variables
 
-## 💁‍♀️ Recommend
+- `DOTPATH`: install path. Default: `~/.dotfiles`
+- `DOTFILES_GITHUB`: git remote. Default: this repository
+- `DOTFILES_BRANCH`: git branch. Default: `master`
+- `DOTFILES_ASSUME_YES=1`: same as `--yes`
+- `TERRAFORM_VERSION`: Terraform version for non-Homebrew installs
 
-I recommend installing [Nerd fonts](https://github.com/ryanoasis/nerd-fonts) to display graphical icons on terminal. 
+## Terraform modules
 
-A script to automate the installation is placed in `etc/init/deep.d/98_font.sh`.
+- `modules/symlink`: creates config and binary symlinks under `$HOME`
+- `modules/brew`: runs `brew bundle` when `etc/scripts/install.d/Brewfile` changes
+- `modules/macos_defaults`: writes macOS defaults and restarts Dock/Finder
+
+Run Terraform directly when iterating locally:
 
 ```bash
-$ make deep
+cd terraform
+terraform init
+terraform plan
+terraform apply
 ```
 
-## 🧪 Testing
+## Testing
 
-The dotfiles include comprehensive automated tests using Bats (Bash Automated Testing System) and Docker.
-
-### Running Tests
+The Bats and Docker test suites are available through the root Makefile:
 
 ```bash
-# Run local unit tests
-$ make test
-
-# Run all Docker-based integration tests
-$ make test-docker
-
-# Run Docker tests for specific OS
-$ make test-docker-ubuntu
-$ make test-docker-archlinux
-
-# Run Bats tests in Docker
-$ make test-bats                # Both Ubuntu and Arch Linux
-$ make test-bats-ubuntu          # Ubuntu only
-$ make test-bats-archlinux       # Arch Linux only
-$ make test-bats-ci              # CI mode (both OS)
-
-# Run macOS Docker test (requires Docker Desktop on macOS)
-$ make test-mac-local            # Run tests in macOS VM container
-
-# Rebuild Docker images and run tests
-$ make test-rebuild
+make bats
+make test-docker
 ```
-
-### Test Structure
 
 - **Unit Tests (Bats)**: Fast, isolated tests for individual components
   - `test/test_header.bats` - Tests for utility functions
@@ -136,17 +136,6 @@ $ make test-rebuild
   - Tests both remote (curl) and local installation methods
   - Verifies actual system changes
   - macOS test available using `trycua/lumier` VM (experimental)
-
-### Environment Variables
-
-- `CI` or `DOTFILES_TEST` - When set, SSH keys will be generated without passphrase prompts
-- `SKIP_BATS_TESTS` - Skip running Bats tests (useful when test directory is not available)
-
-For manual installations, you can set these variables to avoid interactive prompts:
-
-```bash
-$ DOTFILES_TEST=1 make deploy
-```
 
 ## References
 
