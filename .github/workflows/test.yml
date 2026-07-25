@@ -187,6 +187,11 @@ jobs:
         uses: dorny/paths-filter@v3
         id: filter
         with:
+          # Compare only the commits this push / PR update added (incremental),
+          # not the whole branch against master. github.event.before is the tip
+          # before the push and the previous head on PR "synchronize"; it is
+          # empty on PR "opened", where paths-filter falls back to the PR base.
+          base: ${{ github.event.before }}
           filters: |
             brewfile:
               - 'etc/scripts/install.d/Brewfile'
