@@ -92,6 +92,9 @@ while [ "$#" -gt 0 ]; do
       usage
       exit 0
       ;;
+    init | --init | -i)
+      warn "'$1' is deprecated and ignored; the installer always performs the full setup."
+      ;;
     *)
       error "Unknown option: $1"
       usage >&2

@@ -78,6 +78,11 @@ resource "terraform_data" "links" {
     target          = each.value.target
     force           = tostring(each.value.force)
     replace_symlink = tostring(each.value.replace_symlink)
+    # Reconcile on every apply so a link skipped because of a conflicting real
+    # file, or one removed manually after creation, is (re)created on the next
+    # apply. The provisioner below still never overwrites a real (non-symlink)
+    # file, so this is safe.
+    always = timestamp()
   }
 
   provisioner "local-exec" {

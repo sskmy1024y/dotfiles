@@ -11,7 +11,25 @@ set -euo pipefail
 : "${DOTPATH:=$HOME/.dotfiles}"
 : "${DOTFILES_GITHUB:=https://github.com/sskmy1024y/dotfiles.git}"
 : "${DOTFILES_BRANCH:=master}"
-: "${DOTFILES_ARCHIVE_URL:=${DOTFILES_GITHUB%.git}/archive/refs/heads/${DOTFILES_BRANCH}.tar.gz}"
+
+# Normalize an SSH-form remote (git@host:owner/repo or ssh://git@host/owner/repo)
+# to https:// so the archive download URL below is always a valid https URL.
+normalize_git_https() {
+  case "$1" in
+    git@*:*)
+      local rest="${1#git@}"
+      echo "https://${rest%%:*}/${rest#*:}"
+      ;;
+    ssh://git@*)
+      echo "https://${1#ssh://git@}"
+      ;;
+    *)
+      echo "$1"
+      ;;
+  esac
+}
+
+: "${DOTFILES_ARCHIVE_URL:=$(normalize_git_https "${DOTFILES_GITHUB%.git}")/archive/refs/heads/${DOTFILES_BRANCH}.tar.gz}"
 export DOTPATH DOTFILES_GITHUB DOTFILES_BRANCH
 
 git_works() {
