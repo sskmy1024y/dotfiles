@@ -90,6 +90,7 @@ teardown() {
     assert_dir_exists "$HOME/.ssh"
     assert_dir_exists "$HOME/.git_template/hooks"
     assert_dir_exists "$HOME/.claude"
+    assert_dir_exists "$HOME/.codex"
 }
 
 @test "deploy script sets correct SSH permissions" {
@@ -193,6 +194,19 @@ teardown() {
         assert_link_exists "$HOME/.claude/commands"
         assert_symlink_to "$DOTPATH/config/claude/commands" "$HOME/.claude/commands"
     fi
+}
+
+@test "deploy script creates Codex symlinks" {
+    # Setup test environment
+    export HOME="$TEST_TEMP_DIR/home"
+    export DOTPATH="$DOTPATH"
+
+    # Run deploy script
+    run bash "$DOTPATH/etc/scripts/deploy"
+
+    # Check Codex symlinks
+    assert_link_exists "$HOME/.codex/AGENTS.md"
+    assert_symlink_to "$DOTPATH/config/codex/AGENTS.md" "$HOME/.codex/AGENTS.md"
 }
 
 @test "deploy script creates binary symlinks" {

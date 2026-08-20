@@ -93,6 +93,12 @@ locals {
       force           = false
       replace_symlink = false
     },
+    {
+      source          = "${local.dotfiles_root}/config/codex/AGENTS.md"
+      target          = "${local.home}/.codex/AGENTS.md"
+      force           = false
+      replace_symlink = false
+    },
   ]
 
   optional_links = var.enable_1password_ssh ? [
@@ -123,6 +129,10 @@ locals {
     },
     {
       path = "${local.home}/.claude"
+      mode = ""
+    },
+    {
+      path = "${local.home}/.codex"
       mode = ""
     }
   ]

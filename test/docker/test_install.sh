@@ -152,6 +152,7 @@ verify_installation() {
     assert_symlink "$HOME/.gitconfig" "Git config"
     assert_symlink "$HOME/.gitignore.global" "Git ignore"
     assert_symlink "$HOME/.tmux.conf" "Tmux config"
+    assert_symlink "$HOME/.codex/AGENTS.md" "Codex global instructions"
     
     echo -e "\n--- Checking zsh configs ---"
     for file in "$HOME"/.dotfiles/config/zsh/*.zsh; do

@@ -22,6 +22,7 @@ dotfiles/
  ├── bin/            # Useful command line scripts
  ├── config/         # Dotfiles
  │   ├── claude      # Claude AI configuration
+ │   ├── codex       # Codex global instructions
  │   ├── git         # Git configuration
  │   ├── iterm       # iTerm2 configuration
  │   ├── ssh         # SSH configuration
