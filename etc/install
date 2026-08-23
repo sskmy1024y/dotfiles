@@ -245,6 +245,12 @@ ensure_ssh_keygen() {
   is_exists ssh-keygen
 }
 
+ensure_jq() {
+  is_exists jq && return 0
+  install_platform_package jq jq
+  is_exists jq
+}
+
 terraform_version() {
   if [ -n "$TERRAFORM_VERSION" ]; then
     echo "$TERRAFORM_VERSION"
@@ -348,6 +354,11 @@ missing_runtime_commands() {
     missing=1
   fi
 
+  if [ "$(detect_os)" = "linux" ] && ! is_exists jq; then
+    error "jq: command not found"
+    missing=1
+  fi
+
   if [ "$enable_brew" = "true" ] && ! brew_on_path; then
     error "brew: command not found"
     missing=1
@@ -404,6 +415,12 @@ ensure_runtime_requirements() {
 
   if [ "$(detect_os)" = "linux" ] && ! ensure_ssh_keygen; then
     error "Failed to install or find ssh-keygen"
+    print_install_hints
+    exit 1
+  fi
+
+  if [ "$(detect_os)" = "linux" ] && ! ensure_jq; then
+    error "Failed to install or find jq"
     print_install_hints
     exit 1
   fi

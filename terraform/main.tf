@@ -88,6 +88,12 @@ locals {
       replace_symlink = false
     },
     {
+      source          = "${local.dotfiles_root}/config/claude/statusline.sh"
+      target          = "${local.home}/.claude/statusline.sh"
+      force           = false
+      replace_symlink = false
+    },
+    {
       source          = "${local.dotfiles_root}/config/claude/commands"
       target          = "${local.home}/.claude/commands"
       force           = false

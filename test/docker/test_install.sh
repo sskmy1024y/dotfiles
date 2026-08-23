@@ -152,6 +152,7 @@ verify_installation() {
     assert_symlink "$HOME/.gitconfig" "Git config"
     assert_symlink "$HOME/.gitignore.global" "Git ignore"
     assert_symlink "$HOME/.tmux.conf" "Tmux config"
+    assert_symlink "$HOME/.claude/statusline.sh" "Claude status line"
     assert_symlink "$HOME/.codex/AGENTS.md" "Codex global instructions"
     
     echo -e "\n--- Checking zsh configs ---"
@@ -169,6 +170,7 @@ verify_installation() {
     assert_exists "$HOME/.ssh/github-key" "GitHub SSH private key"
     assert_exists "$HOME/.ssh/github-key.pub" "GitHub SSH public key"
     assert_exists "$HOME/.tmux/plugins/tpm" "TPM installation"
+    assert_exists "$(command -v jq || true)" "jq command"
 
     if [ -L "$HOME/.claude/agents" ]; then
         echo -e "${RED}✗${NC} Claude agents symlink must not be dangling"

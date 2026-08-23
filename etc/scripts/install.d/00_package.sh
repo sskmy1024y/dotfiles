@@ -23,7 +23,7 @@ echo ""
 PKG_DEFAULT="git tmux curl zsh"
 
 ubuntu() {
-  PKG_UBUNTU="peco openssh-server libssl-dev locales-all"
+  PKG_UBUNTU="peco openssh-server libssl-dev locales-all jq"
 
   sudo apt update -q -y
   sudo apt upgrade -y
@@ -34,7 +34,7 @@ ubuntu() {
 }
 
 archlinux() {
-  PKG_ARCH="ghq peco hub sakura fzf p7zip neovim python2-neovim python-pynvim llvm baobab radare2 weechat ranger"
+  PKG_ARCH="ghq peco hub sakura fzf p7zip neovim python2-neovim python-pynvim llvm baobab radare2 weechat ranger jq"
 
   if ! has yay; then
     warn "yay has not installed yet."

@@ -189,6 +189,10 @@ teardown() {
         assert_link_exists "$HOME/.claude/settings.json"
         assert_symlink_to "$DOTPATH/config/claude/settings.json" "$HOME/.claude/settings.json"
     fi
+
+    assert_link_exists "$HOME/.claude/statusline.sh"
+    assert_symlink_to "$DOTPATH/config/claude/statusline.sh" "$HOME/.claude/statusline.sh"
+    assert [ -x "$HOME/.claude/statusline.sh" ]
     
     if [ -e "$HOME/.claude/commands" ]; then
         assert_link_exists "$HOME/.claude/commands"

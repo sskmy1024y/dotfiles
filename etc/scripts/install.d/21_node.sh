@@ -19,8 +19,6 @@ echo ""
 info "21 Install Node"
 echo ""
 
-NODE_VERSION="24.16.0"
-
 anyenv_on_path() {
   if [ -d "$HOME/.anyenv/bin" ]; then
     export PATH="$HOME/.anyenv/bin:$PATH"
@@ -55,14 +53,53 @@ clone_or_skip() {
 
 anyenv_on_path
 
-# install python
-install_node(){
+node_build_plugin_dir() {
   if is_exists "nodenv"; then
-    if [ ! -d "$HOME/.anyenv/envs/nodenv/versions/$NODE_VERSION" ]; then
-      nodenv install "$NODE_VERSION"
+    printf "%s/plugins/node-build\n" "$(nodenv root)"
+  else
+    printf "%s/.anyenv/envs/nodenv/plugins/node-build\n" "$HOME"
+  fi
+}
+
+update_node_build() {
+  local node_build_dir
+
+  node_build_dir="$(node_build_plugin_dir)"
+  info "Updating node-build definitions..."
+
+  if [ ! -d "$node_build_dir/.git" ]; then
+    error "node-build plugin repository not found: $node_build_dir"
+    return 1
+  fi
+
+  git -C "$node_build_dir" pull --ff-only
+}
+
+latest_stable_node_version() {
+  # `nodenv install --list` is sorted and contains the latest stable release
+  # for each maintained Node major. Other runtimes such as GraalJS may also
+  # appear, so only accept plain Node semantic versions.
+  nodenv install --list 2>/dev/null |
+    awk '$1 ~ /^[0-9]+\.[0-9]+\.[0-9]+$/ { latest = $1 } END { print latest }'
+}
+
+# install node
+install_node(){
+  local node_version
+
+  if is_exists "nodenv"; then
+    update_node_build
+    node_version="$(latest_stable_node_version)"
+    if [ -z "$node_version" ]; then
+      error "Could not determine the latest stable Node version"
+      return 1
     fi
-    nodenv global "$NODE_VERSION"
-    info "Installed node $NODE_VERSION"
+
+    if [ ! -d "$(nodenv root)/versions/$node_version" ]; then
+      nodenv install "$node_version"
+    fi
+    nodenv global "$node_version"
+    info "Installed node $node_version"
   else
     warn "nodenv not found. installing..."
     bash "$DOTPATH"/etc/scripts/install.d/20_anyenv.sh
