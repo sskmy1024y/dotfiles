@@ -21,7 +21,6 @@ Date: 2/Jul/2025
 dotfiles/
  ├── bin/            # Useful command line scripts
  ├── config/         # Dotfiles
- │   ├── claude      # Claude AI configuration
  │   ├── codex       # Codex global instructions
  │   ├── git         # Git configuration
  │   ├── iterm       # iTerm2 configuration

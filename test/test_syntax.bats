@@ -225,7 +225,6 @@ find_shell_scripts() {
         "$DOTPATH/etc/install"
         "$DOTPATH/etc/setup"
         "$DOTPATH/etc/bootstrap"
-        "$DOTPATH/config/claude/statusline.sh"
         "$DOTPATH/test/install_bats.sh"
         "$DOTPATH/test/bats"
     )

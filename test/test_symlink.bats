@@ -89,7 +89,6 @@ teardown() {
     assert_dir_exists "$HOME/.zsh"
     assert_dir_exists "$HOME/.ssh"
     assert_dir_exists "$HOME/.git_template/hooks"
-    assert_dir_exists "$HOME/.claude"
     assert_dir_exists "$HOME/.codex"
 }
 
@@ -168,35 +167,6 @@ teardown() {
     if [ -e "$HOME/.tmux.conf" ]; then
         assert_link_exists "$HOME/.tmux.conf"
         assert_symlink_to "$DOTPATH/config/tmux/.tmux.conf" "$HOME/.tmux.conf"
-    fi
-}
-
-@test "deploy script creates Claude symlinks" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    export DOTPATH="$DOTPATH"
-    
-    # Run deploy script
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check Claude symlinks
-    if [ -e "$HOME/.claude/CLAUDE.md" ]; then
-        assert_link_exists "$HOME/.claude/CLAUDE.md"
-        assert_symlink_to "$DOTPATH/config/claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
-    fi
-    
-    if [ -e "$HOME/.claude/settings.json" ]; then
-        assert_link_exists "$HOME/.claude/settings.json"
-        assert_symlink_to "$DOTPATH/config/claude/settings.json" "$HOME/.claude/settings.json"
-    fi
-
-    assert_link_exists "$HOME/.claude/statusline.sh"
-    assert_symlink_to "$DOTPATH/config/claude/statusline.sh" "$HOME/.claude/statusline.sh"
-    assert [ -x "$HOME/.claude/statusline.sh" ]
-    
-    if [ -e "$HOME/.claude/commands" ]; then
-        assert_link_exists "$HOME/.claude/commands"
-        assert_symlink_to "$DOTPATH/config/claude/commands" "$HOME/.claude/commands"
     fi
 }
 

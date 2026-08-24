@@ -76,30 +76,6 @@ locals {
       replace_symlink = false
     },
     {
-      source          = "${local.dotfiles_root}/config/claude/CLAUDE.md"
-      target          = "${local.home}/.claude/CLAUDE.md"
-      force           = false
-      replace_symlink = false
-    },
-    {
-      source          = "${local.dotfiles_root}/config/claude/settings.json"
-      target          = "${local.home}/.claude/settings.json"
-      force           = false
-      replace_symlink = false
-    },
-    {
-      source          = "${local.dotfiles_root}/config/claude/statusline.sh"
-      target          = "${local.home}/.claude/statusline.sh"
-      force           = false
-      replace_symlink = false
-    },
-    {
-      source          = "${local.dotfiles_root}/config/claude/commands"
-      target          = "${local.home}/.claude/commands"
-      force           = false
-      replace_symlink = false
-    },
-    {
       source          = "${local.dotfiles_root}/config/codex/AGENTS.md"
       target          = "${local.home}/.codex/AGENTS.md"
       force           = false
@@ -131,10 +107,6 @@ locals {
     },
     {
       path = "${local.home}/.git_template/hooks"
-      mode = ""
-    },
-    {
-      path = "${local.home}/.claude"
       mode = ""
     },
     {

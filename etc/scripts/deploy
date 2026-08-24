@@ -113,14 +113,6 @@ fi
 # shellcheck disable=SC2016
 log 'Add to your shell: export PATH="$HOME/.tmux/bin:$PATH"'
 
-# Claude
-deploy_config "claude"
-ensure_dir "$HOME/.claude"
-symlink "$CONFPATH/claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
-symlink "$CONFPATH/claude/settings.json" "$HOME/.claude/settings.json"
-symlink "$CONFPATH/claude/statusline.sh" "$HOME/.claude/statusline.sh"
-symlink "$CONFPATH/claude/commands" "$HOME/.claude/commands"
-
 # Codex
 deploy_config "codex"
 ensure_dir "$HOME/.codex"

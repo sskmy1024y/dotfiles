@@ -76,7 +76,6 @@ teardown() {
     assert_dir_exists "$HOME/.zsh"
     assert_dir_exists "$HOME/.ssh"
     assert_dir_exists "$HOME/.git_template/hooks"
-    assert_dir_exists "$HOME/.claude"
     assert_dir_exists "$HOME/.codex"
 }
 
