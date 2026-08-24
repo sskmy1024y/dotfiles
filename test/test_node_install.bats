@@ -15,7 +15,7 @@ teardown() {
     teardown_test_dir
 }
 
-@test "21_node updates node-build and installs the latest stable Node" {
+@test "Node runtime installer updates node-build and installs the latest stable Node" {
     cat > "$TEST_TEMP_DIR/bin/nodenv" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -58,7 +58,7 @@ exit 1
 EOF
     chmod +x "$TEST_TEMP_DIR/bin/git"
 
-    run bash "$DOTPATH/etc/scripts/install.d/21_node.sh"
+    run bash "$DOTPATH/etc/scripts/runtimes/node.sh"
 
     assert_success
     assert_output --partial "Updating node-build definitions..."

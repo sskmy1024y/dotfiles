@@ -2,40 +2,12 @@ DOTPATH := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 .DEFAULT_GOAL := help
 
-.PHONY: all install deploy init deep update check clean plan \
-	test bats test-bats test-rebuild test-docker test-docker-all \
+.PHONY: test bats test-bats test-rebuild test-docker test-docker-all \
 	test-docker-ubuntu test-docker-archlinux test-bats-docker \
 	test-bats-ubuntu test-bats-archlinux test-bats-ci test-mac-local \
 	test-mac-tart-check test-mac-tart-prepare test-mac-tart-oneliner \
 	test-mac-tart-git test-mac-tart-full test-mac-tart-shell \
 	test-mac-tart-clean test-mac-tart-clean-all help
-
-all: install
-
-install: ## Run the Terraform-based dotfiles installer
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install
-
-deploy: ## Apply dotfile links without Homebrew or macOS defaults
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install --no-brew --no-macos-defaults
-
-plan: ## Preview Terraform-managed dotfile changes
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install --plan
-
-check: ## Check installer requirements without making changes
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install --check
-
-init: ## Run the legacy package and environment installers
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/scripts/init
-
-deep: ## Install optional applications, settings, and fonts
-	@find $(DOTPATH)/etc/scripts/deep.d -name "[0-9][0-9]*.sh" | sort | bash
-
-update: ## Fetch changes for this repository
-	@git pull --ff-only
-
-clean: ## Destroy Terraform-managed links and settings (keeps the repository)
-	@command -v terraform >/dev/null 2>&1 || { echo 'terraform: command not found' >&2; exit 1; }
-	@terraform -chdir=$(DOTPATH)/terraform destroy
 
 test: ## Run the local Bats test suite
 	@bash $(DOTPATH)/test/run_tests.sh --ci
@@ -47,11 +19,11 @@ test-bats: test ## Alias for the local Bats test suite
 test-rebuild: ## Rebuild Docker images without cache
 	@$(MAKE) -C $(DOTPATH)/test/docker build-clean
 
-test-docker: ## Test the current working tree on Ubuntu and Arch Linux
-	@$(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local test-archlinux-local
+test-docker: ## Run the default installation integration test on Ubuntu
+	@SKIP_BATS_TESTS=true $(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local
 
-test-docker-all: ## Run local and remote Docker tests on both Linux distributions
-	@$(MAKE) -C $(DOTPATH)/test/docker test-all
+test-docker-all: ## Run installation integration tests on Ubuntu and Arch Linux
+	@SKIP_BATS_TESTS=true $(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local test-archlinux-local
 
 test-docker-ubuntu: ## Test the current working tree on Ubuntu
 	@$(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local
