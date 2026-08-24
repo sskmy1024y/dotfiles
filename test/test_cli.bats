@@ -12,16 +12,25 @@ setup() {
     export XDG_STATE_HOME="$HOME/.local/state"
     export CLI_MARKER="$TEST_TEMP_DIR/cli-marker"
 
-    mkdir -p "$DOTPATH/etc/scripts/deep.d" "$DOTPATH/terraform"
+    mkdir -p "$DOTPATH/etc/scripts/runtimes" "$DOTPATH/etc/scripts/extras" "$DOTPATH/terraform"
     cat > "$DOTPATH/etc/install" <<'INSTALL'
 #!/usr/bin/env bash
 printf 'install:%s\n' "$*" >> "$CLI_MARKER"
 INSTALL
-    cat > "$DOTPATH/etc/scripts/init" <<'RUNTIMES'
+    local component
+    for component in anyenv node python; do
+        cat > "$DOTPATH/etc/scripts/runtimes/$component.sh" <<'RUNTIME'
 #!/usr/bin/env bash
-printf 'runtimes:%s\n' "$*" >> "$CLI_MARKER"
-RUNTIMES
-    chmod +x "$DOTPATH/etc/install" "$DOTPATH/etc/scripts/init"
+printf 'runtime:%s:%s\n' "$(basename "$0" .sh)" "$*" >> "$CLI_MARKER"
+RUNTIME
+    done
+    for component in applications cica macos; do
+        cat > "$DOTPATH/etc/scripts/extras/$component.sh" <<'EXTRA'
+#!/usr/bin/env bash
+printf 'extra:%s:%s\n' "$(basename "$0" .sh)" "$*" >> "$CLI_MARKER"
+EXTRA
+    done
+    chmod +x "$DOTPATH/etc/install" "$DOTPATH/etc/scripts/runtimes/"*.sh "$DOTPATH/etc/scripts/extras/"*.sh
 }
 
 teardown() {
@@ -34,6 +43,7 @@ teardown() {
     assert_success
     assert_output --partial "dotfiles <command>"
     assert_output --partial "install"
+    assert_output --partial "Apply the full setup"
     assert_output --partial "sync"
     assert_output --partial "runtimes"
 }
@@ -58,14 +68,25 @@ teardown() {
     run bash "$DOTFILES_SOURCE/bin/dotfiles" sync
 
     assert_success
-    assert_file_contains "$CLI_MARKER" "install:--no-brew --no-macos-defaults"
+    assert_file_contains "$CLI_MARKER" "install:--no-packages --no-macos-defaults"
 }
 
-@test "runtimes delegates to the optional runtime installer" {
+@test "runtimes runs the explicit runtime components" {
     run bash "$DOTFILES_SOURCE/bin/dotfiles" runtimes
 
     assert_success
-    assert_file_contains "$CLI_MARKER" "runtimes:"
+    assert_file_contains "$CLI_MARKER" "runtime:anyenv:"
+    assert_file_contains "$CLI_MARKER" "runtime:node:"
+    assert_file_contains "$CLI_MARKER" "runtime:python:"
+}
+
+@test "extras runs the explicit optional components" {
+    run bash "$DOTFILES_SOURCE/bin/dotfiles" extras
+
+    assert_success
+    assert_file_contains "$CLI_MARKER" "extra:applications:"
+    assert_file_contains "$CLI_MARKER" "extra:cica:"
+    assert_file_contains "$CLI_MARKER" "extra:macos:"
 }
 
 @test "an existing Terraform state is recognized as initialized" {
@@ -74,4 +95,34 @@ teardown() {
     run bash "$DOTFILES_SOURCE/bin/dotfiles" __is_initialized
 
     assert_success
+}
+
+@test "interactive menu selects an action with the down arrow" {
+    skip_if_missing script
+    mkdir -p "$XDG_STATE_HOME/dotfiles"
+    touch "$XDG_STATE_HOME/dotfiles/installed"
+
+    if [ "$(uname -s)" = "Darwin" ]; then
+        run bash -c '(sleep 0.2; printf "\033[B\n"; sleep 0.2) | TERM=xterm-256color script -q /dev/null bash "$DOTFILES_SOURCE/bin/dotfiles"'
+    else
+        run bash -c '(sleep 0.2; printf "\033[B\n"; sleep 0.2) | TERM=xterm-256color script -qec "bash \"$DOTFILES_SOURCE/bin/dotfiles\"" /dev/null'
+    fi
+
+    assert_success
+    assert_file_contains "$CLI_MARKER" "install:"
+}
+
+@test "interactive menu falls back to number selection on a dumb terminal" {
+    skip_if_missing script
+    mkdir -p "$XDG_STATE_HOME/dotfiles"
+    touch "$XDG_STATE_HOME/dotfiles/installed"
+
+    if [ "$(uname -s)" = "Darwin" ]; then
+        run bash -c '(sleep 0.2; printf "2\n"; sleep 0.2) | TERM=dumb script -q /dev/null bash "$DOTFILES_SOURCE/bin/dotfiles"'
+    else
+        run bash -c '(sleep 0.2; printf "2\n"; sleep 0.2) | TERM=dumb script -qec "bash \"$DOTFILES_SOURCE/bin/dotfiles\"" /dev/null'
+    fi
+
+    assert_success
+    assert_file_contains "$CLI_MARKER" "install:"
 }

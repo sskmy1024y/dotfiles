@@ -113,7 +113,6 @@ run_all_tests() {
         "test_header.bats:Unit Tests - Header Functions"
         "test_bootstrap.bats:Unit Tests - Bootstrap"
         "test_macos.bats:Unit Tests - macOS Helpers"
-        "test_deploy.bats:Integration Tests - Deploy Script"
         "test_tode.bats:Integration Tests - Tode Configuration"
         "test_syntax.bats:Code Quality - Syntax & Linting"
     )
@@ -180,14 +179,8 @@ test_individual() {
         header)
             run_bats_test "Header Function Tests" "$TEST_DIR/test_header.bats"
             ;;
-        symlink)
-            run_bats_test "Symlink Tests" "$TEST_DIR/test_symlink.bats"
-            ;;
         macos)
             run_bats_test "macOS Helper Tests" "$TEST_DIR/test_macos.bats"
-            ;;
-        deploy)
-            run_bats_test "Deploy Script Tests" "$TEST_DIR/test_deploy.bats"
             ;;
         tode)
             run_bats_test "Tode Configuration Tests" "$TEST_DIR/test_tode.bats"
@@ -208,7 +201,7 @@ test_individual() {
             ;;
         *)
             echo -e "${RED}Error: Unknown test: $test${NC}"
-            echo "Available tests: header, symlink, macos, deploy, tode, syntax"
+            echo "Available tests: header, macos, tode, syntax"
             echo "Or specify a .bats file directly"
             exit 1
             ;;
@@ -244,9 +237,7 @@ usage() {
     echo ""
     echo "Tests:"
     echo "  header         Run header.sh function tests"
-    echo "  symlink        Run symlink functionality tests"
     echo "  macos          Run macOS helper tests"
-    echo "  deploy         Run deploy script tests"
     echo "  syntax         Run syntax and linting tests"
     echo ""
     echo "Examples:"

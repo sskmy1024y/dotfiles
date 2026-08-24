@@ -1,7 +1,7 @@
 # Terraform dotfiles
 
-This directory is an experimental Terraform entrypoint for managing this
-dotfiles repository alongside the existing shell scripts.
+This directory is the declarative implementation used by `dotfiles install`
+and `dotfiles sync`.
 
 It follows the same broad flow as the shell implementation:
 
@@ -35,17 +35,15 @@ terraform apply -target=module.macos_defaults
 
 ## Variables
 
-- `enable_brew`: run `brew bundle` from `etc/scripts/install.d/Brewfile`.
+- `enable_brew`: run `brew bundle` from `config/homebrew/Brewfile`.
 - `enable_macos_defaults`: write macOS defaults.
 - `enable_1password_ssh`: link the 1Password SSH config.
 - `enable_macos_tode`: link the Tode and Ghostty integration on macOS.
 
-All are enabled by default because this Terraform entrypoint currently targets
-the macOS workflow. Disable them explicitly when testing on non-macOS hosts.
+The CLI disables macOS-only variables on other platforms.
 
 ## Scope
 
-This intentionally does not replace every shell side effect yet. SSH key
-generation on Linux, Touch ID sudo configuration, Cica font downloads,
-and Gatekeeper changes remain in the shell scripts because they either require
-network access, sudo, or host-specific branching.
+Terraform owns directories, symlinks, the Linux SSH identity, Homebrew bundle,
+macOS defaults, and Tode integration. Runtime installers and explicitly
+optional extras remain small shell components under `etc/scripts/`.

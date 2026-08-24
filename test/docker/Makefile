@@ -99,7 +99,7 @@ bats-ci: ## Run Bats tests in CI mode (use OS=ubuntu/archlinux/all, default: all
 # Run specific test file or suite
 # Usage: make bats-test TEST=syntax OS=ubuntu
 #        make bats-test TEST=test/test_header.bats OS=archlinux
-#        make bats-test TEST=deploy (runs on both OS)
+#        make bats-test TEST=test/test_cli.bats (runs on both OS)
 bats-test: ## Run specific test (use TEST=name/path OS=ubuntu/archlinux/all)
 	@if [ -z "$(TEST)" ]; then \
 		echo "Error: TEST parameter required. Example: make bats-test TEST=syntax"; \

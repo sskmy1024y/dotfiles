@@ -2,43 +2,12 @@ DOTPATH := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 .DEFAULT_GOAL := help
 
-.PHONY: all install deploy init runtimes deep update check clean plan \
-	test bats test-bats test-rebuild test-docker test-docker-all \
+.PHONY: test bats test-bats test-rebuild test-docker test-docker-all \
 	test-docker-ubuntu test-docker-archlinux test-bats-docker \
 	test-bats-ubuntu test-bats-archlinux test-bats-ci test-mac-local \
 	test-mac-tart-check test-mac-tart-prepare test-mac-tart-oneliner \
 	test-mac-tart-git test-mac-tart-full test-mac-tart-shell \
 	test-mac-tart-clean test-mac-tart-clean-all help
-
-all: install
-
-install: ## Compatibility wrapper for: dotfiles install
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles install
-
-deploy: ## Compatibility wrapper for: dotfiles sync
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles sync
-
-plan: ## Compatibility wrapper for: dotfiles plan
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles plan
-
-check: ## Compatibility wrapper for: dotfiles check
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles check
-
-init: ## Deprecated alias for runtimes
-	@echo "make init is deprecated; use make runtimes"
-	@$(MAKE) --no-print-directory runtimes
-
-runtimes: ## Compatibility wrapper for: dotfiles runtimes
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles runtimes
-
-deep: ## Compatibility wrapper for: dotfiles extras
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles extras
-
-update: ## Compatibility wrapper for: dotfiles update
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles update
-
-clean: ## Compatibility wrapper for: dotfiles clean
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles clean
 
 test: ## Run the local Bats test suite
 	@bash $(DOTPATH)/test/run_tests.sh --ci

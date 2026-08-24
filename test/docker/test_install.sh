@@ -158,7 +158,7 @@ verify_installation() {
     done
     
     echo -e "\n--- Checking binary symlinks ---"
-    assert_symlink "$HOME/.local/bin/deploy" "Deploy script"
+    assert_symlink "$HOME/.local/bin/dotfiles" "Dotfiles CLI"
     
     echo -e "\n--- Checking SSH configs ---"
     assert_symlink "$HOME/.ssh/config" "SSH config"
@@ -166,6 +166,7 @@ verify_installation() {
     assert_exists "$HOME/.ssh/github-key" "GitHub SSH private key"
     assert_exists "$HOME/.ssh/github-key.pub" "GitHub SSH public key"
     assert_exists "$(command -v jq || true)" "jq command"
+    assert_exists "$(command -v fzf || true)" "fzf command"
 
     # Check permissions
     echo -e "\n--- Checking permissions ---"

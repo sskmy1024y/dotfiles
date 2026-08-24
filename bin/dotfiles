@@ -20,8 +20,8 @@ usage() {
 Usage: dotfiles <command> [options]
 
 Commands:
-  install     Run the standard setup: dotfiles, packages, and OS settings.
-  sync        Sync dotfiles without the Brewfile or macOS defaults.
+  install     Apply the full setup: configuration, packages, and OS settings.
+  sync        Sync managed configuration without packages or OS settings.
   runtimes    Install anyenv, Node.js, and Python.
   extras      Install optional applications, fonts, and advanced settings.
   plan        Preview Terraform-managed changes.
@@ -76,21 +76,25 @@ run_install() {
 
 run_sync() {
   require_checkout
-  bash "$DOTPATH/etc/install" --no-brew --no-macos-defaults "$@"
+  bash "$DOTPATH/etc/install" --no-packages --no-macos-defaults "$@"
 }
 
 run_runtimes() {
+  local component
+
   require_checkout
-  bash "$DOTPATH/etc/scripts/init" "$@"
+  for component in anyenv node python; do
+    bash "$DOTPATH/etc/scripts/runtimes/${component}.sh" "$@"
+  done
 }
 
 run_extras() {
-  local script
+  local component
 
   require_checkout
-  while IFS= read -r script; do
-    bash "$script"
-  done < <(find "$DOTPATH/etc/scripts/deep.d" -name '[0-9][0-9]*.sh' | sort)
+  for component in applications cica macos; do
+    bash "$DOTPATH/etc/scripts/extras/${component}.sh" "$@"
+  done
 }
 
 run_status() {
@@ -122,6 +126,100 @@ run_clean() {
   terraform -chdir="$DOTPATH/terraform" destroy
 }
 
+plain_menu_choice() {
+  local choice
+
+  cat >&2 <<'MENU'
+
+Dotfiles
+  1) Sync configuration
+  2) Apply full setup
+  3) Install language runtimes
+  4) Install optional extras
+  5) Preview changes
+  6) Check status
+  7) Update repository
+  q) Quit
+MENU
+  printf '> ' >&2
+  read -r choice
+  printf '%s\n' "$choice"
+}
+
+arrow_menu_choice() (
+  local -a items=(
+    "Sync configuration"
+    "Apply full setup"
+    "Install language runtimes"
+    "Install optional extras"
+    "Preview changes"
+    "Check status"
+    "Update repository"
+  )
+  local selected=0 key sequence index
+
+  restore_menu_terminal() {
+    printf '\033[?25h\033[?1049l' >&2
+  }
+
+  trap 'restore_menu_terminal' EXIT
+  trap 'exit 130' HUP INT TERM
+  printf '\033[?1049h\033[?25l' >&2
+
+  while :; do
+    printf '\033[H\033[2J' >&2
+    printf '\033[1;36mDotfiles\033[0m\n\n' >&2
+
+    for ((index = 0; index < ${#items[@]}; index++)); do
+      if [ "$index" -eq "$selected" ]; then
+        printf ' \033[7m > %-34s \033[0m\n' "${items[$index]}" >&2
+      else
+        printf '   %-36s\n' "${items[$index]}" >&2
+      fi
+    done
+
+    printf '\n \033[2m[Up/Down] Move  [Enter] Select  [q/Esc] Quit\033[0m\n' >&2
+
+    key=""
+    if ! IFS= read -r -s -n 1 key; then
+      return 1
+    fi
+
+    case "$key" in
+      '')
+        restore_menu_terminal
+        trap - EXIT HUP INT TERM
+        printf '%s\n' "$((selected + 1))"
+        return 0
+        ;;
+      k)
+        selected=$(((selected + ${#items[@]} - 1) % ${#items[@]}))
+        ;;
+      j)
+        selected=$(((selected + 1) % ${#items[@]}))
+        ;;
+      [1-7])
+        selected=$((key - 1))
+        ;;
+      q | Q)
+        return 1
+        ;;
+      $'\033')
+        sequence=""
+        if IFS= read -r -s -n 2 -t 1 sequence; then
+          case "$sequence" in
+            '[A' | OA) selected=$(((selected + ${#items[@]} - 1) % ${#items[@]})) ;;
+            '[B' | OB) selected=$(((selected + 1) % ${#items[@]})) ;;
+            *) return 1 ;;
+          esac
+        else
+          return 1
+        fi
+        ;;
+    esac
+  done
+)
+
 interactive_menu() {
   local choice
 
@@ -139,20 +237,11 @@ interactive_menu() {
     esac
   fi
 
-  cat <<'MENU'
-
-Dotfiles
-  1) Sync configuration
-  2) Run standard setup
-  3) Install language runtimes
-  4) Install optional extras
-  5) Preview changes
-  6) Check status
-  7) Update repository
-  q) Quit
-MENU
-  printf '> '
-  read -r choice
+  if [ "${TERM:-dumb}" = "dumb" ] || [ ! -t 2 ]; then
+    choice="$(plain_menu_choice)"
+  elif ! choice="$(arrow_menu_choice)"; then
+    return 0
+  fi
 
   case "$choice" in
     1) run_sync ;;

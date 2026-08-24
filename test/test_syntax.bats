@@ -68,9 +68,18 @@ shell_scripts() {
         "$DOTPATH/install.sh" \
         "$DOTPATH/bin/dotfiles" \
         "$DOTPATH/etc/bootstrap" \
-        "$DOTPATH/etc/install" \
-        "$DOTPATH/etc/scripts/deploy" \
-        "$DOTPATH/etc/scripts/init"; do
+        "$DOTPATH/etc/install"; do
         [ -x "$script" ]
     done
+}
+
+@test "full setup manages fzf without legacy package scripts" {
+    run grep -F 'install_platform_package fzf fzf' "$DOTPATH/etc/install"
+
+    assert_success
+    assert_file_contains "$DOTPATH/config/homebrew/Brewfile" 'brew "fzf"'
+    assert_not_exists "$DOTPATH/etc/scripts/install.d"
+    assert_not_exists "$DOTPATH/etc/scripts/deep.d"
+    assert_not_exists "$DOTPATH/etc/scripts/deploy"
+    assert_not_exists "$DOTPATH/etc/scripts/init"
 }

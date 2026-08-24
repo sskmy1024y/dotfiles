@@ -23,6 +23,7 @@ dotfiles/
  ├── config/         # Dotfiles
  │   ├── codex       # Codex global instructions
  │   ├── git         # Git configuration
+ │   ├── homebrew    # Homebrew package manifest
  │   ├── iterm       # iTerm2 configuration
  │   ├── ssh         # SSH configuration
  │   ├── tode        # Tode and Ghostty integration (macOS)
@@ -30,7 +31,10 @@ dotfiles/
  ├── doc/            # Document files
  ├── etc/
  │   ├── install     # Remote installer
- │   └── scripts     # Legacy helpers and Brewfile
+ │   ├── lib         # Shared installer helpers
+ │   └── scripts
+ │       ├── runtimes # anyenv, Node.js, and Python installers
+ │       └── extras   # Optional applications, Cica, and macOS integration
  ├── terraform/      # Terraform entrypoint and modules
  ├── test/           # Test suite
  │   ├── bats        # Bats testing framework
@@ -48,7 +52,7 @@ curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/install.
 
 The POSIX `install.sh` entrypoint downloads the Bash bootstrap, obtains the
 repository, installs the `dotfiles` command into `~/.local/bin`, and runs the
-standard setup when no completed installation is detected. It requires `sh`,
+full setup when no completed installation is detected. It requires `sh`,
 `bash`, `tar`, and either `curl` or `wget`.
 
 After the first setup, run `dotfiles` to open the interactive menu or select an
@@ -69,6 +73,7 @@ package manager, including:
 - `terraform`
 - `unzip` for the Terraform release archive
 - `ssh-keygen` for the Linux GitHub identity
+- `fzf` as the managed interactive tool on Linux
 - `brew` when Homebrew bundle is enabled
 - `defaults` when macOS defaults are enabled
 
@@ -102,8 +107,8 @@ The setup links `bin/dotfiles` to `~/.local/bin/dotfiles`. Make sure
 
 | Command | Purpose |
 | --- | --- |
-| `dotfiles install` | Standard setup: sync dotfiles, apply the Brewfile on macOS, and apply OS settings. |
-| `dotfiles sync` | Sync dotfiles without applying the Brewfile or macOS defaults. |
+| `dotfiles install` | Apply the full setup: managed configuration, packages, and OS settings. |
+| `dotfiles sync` | Sync managed configuration without installing packages or applying OS settings. |
 | `dotfiles runtimes` | Optionally install anyenv, Node.js, and Python. |
 | `dotfiles extras` | Optionally install extra applications, Cica, and advanced OS settings. |
 | `dotfiles plan` | Preview Terraform-managed changes without applying them. |
@@ -112,9 +117,8 @@ The setup links `bin/dotfiles` to `~/.local/bin/dotfiles`. Make sure
 | `dotfiles update` | Pull repository changes with Git. |
 | `dotfiles clean` | Destroy Terraform-managed links and settings while keeping the repository. |
 
-The existing Make targets remain as compatibility wrappers. For example,
-`make install`, `make deploy`, and `make runtimes` delegate to the corresponding
-CLI commands. `make init` remains a deprecated alias for `dotfiles runtimes`.
+`dotfiles` is the only operational entrypoint. The root Makefile is reserved
+for test and VM harness commands.
 
 ### Options
 
@@ -122,6 +126,7 @@ CLI commands. `make init` remains a deprecated alias for `dotfiles runtimes`.
 --plan                 Run terraform plan only
 --check                Check commands and repository presence only
 --yes                  Apply without an interactive confirmation
+--no-packages          Do not install managed packages
 --no-brew              Do not run brew bundle
 --no-macos-defaults    Do not write macOS defaults
 --no-1password-ssh     Do not link 1Password SSH config
@@ -138,7 +143,7 @@ CLI commands. `make init` remains a deprecated alias for `dotfiles runtimes`.
 ## Terraform modules
 
 - `modules/symlink`: creates config and binary symlinks under `$HOME`
-- `modules/brew`: runs `brew bundle` when `etc/scripts/install.d/Brewfile` changes
+- `modules/brew`: runs `brew bundle` when `config/homebrew/Brewfile` changes
 - `modules/macos_defaults`: writes macOS defaults and restarts Dock/Finder
 
 Run Terraform directly when iterating locally:
@@ -161,7 +166,6 @@ make test-docker
 
 - **Unit Tests (Bats)**: Fast, isolated tests for individual components
   - `test/test_header.bats` - Tests for utility functions
-- `test/test_deploy.bats` - Tests for deployment script
 - `test/test_syntax.bats` - Syntax validation and linting
 
 - **Integration Tests (Docker)**: Full installation tests in isolated environments

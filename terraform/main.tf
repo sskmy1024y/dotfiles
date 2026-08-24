@@ -22,12 +22,6 @@ locals {
 
   base_links = [
     {
-      source          = "${local.dotfiles_root}/etc/scripts/deploy"
-      target          = "${local.home}/.local/bin/deploy"
-      force           = false
-      replace_symlink = false
-    },
-    {
       source          = "${local.dotfiles_root}/config/zsh/.zshrc"
       target          = "${local.home}/.zshrc"
       force           = false
@@ -260,7 +254,7 @@ module "brew" {
   source = "./modules/brew"
 
   enabled       = var.enable_brew
-  brewfile_path = "${local.dotfiles_root}/etc/scripts/install.d/Brewfile"
+  brewfile_path = "${local.dotfiles_root}/config/homebrew/Brewfile"
 
   depends_on = [module.symlinks, terraform_data.tode]
 }
