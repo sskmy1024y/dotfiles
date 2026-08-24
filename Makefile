@@ -2,7 +2,7 @@ DOTPATH := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 .DEFAULT_GOAL := help
 
-.PHONY: all install deploy init deep update check clean plan \
+.PHONY: all install deploy init runtimes deep update check clean plan \
 	test bats test-bats test-rebuild test-docker test-docker-all \
 	test-docker-ubuntu test-docker-archlinux test-bats-docker \
 	test-bats-ubuntu test-bats-archlinux test-bats-ci test-mac-local \
@@ -12,30 +12,33 @@ DOTPATH := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
 all: install
 
-install: ## Run the Terraform-based dotfiles installer
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install
+install: ## Compatibility wrapper for: dotfiles install
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles install
 
-deploy: ## Apply dotfile links without Homebrew or macOS defaults
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install --no-brew --no-macos-defaults
+deploy: ## Compatibility wrapper for: dotfiles sync
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles sync
 
-plan: ## Preview Terraform-managed dotfile changes
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install --plan
+plan: ## Compatibility wrapper for: dotfiles plan
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles plan
 
-check: ## Check installer requirements without making changes
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/install --check
+check: ## Compatibility wrapper for: dotfiles check
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles check
 
-init: ## Run the legacy package and environment installers
-	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/etc/scripts/init
+init: ## Deprecated alias for runtimes
+	@echo "make init is deprecated; use make runtimes"
+	@$(MAKE) --no-print-directory runtimes
 
-deep: ## Install optional applications, settings, and fonts
-	@find $(DOTPATH)/etc/scripts/deep.d -name "[0-9][0-9]*.sh" | sort | bash
+runtimes: ## Compatibility wrapper for: dotfiles runtimes
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles runtimes
 
-update: ## Fetch changes for this repository
-	@git pull --ff-only
+deep: ## Compatibility wrapper for: dotfiles extras
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles extras
 
-clean: ## Destroy Terraform-managed links and settings (keeps the repository)
-	@command -v terraform >/dev/null 2>&1 || { echo 'terraform: command not found' >&2; exit 1; }
-	@terraform -chdir=$(DOTPATH)/terraform destroy
+update: ## Compatibility wrapper for: dotfiles update
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles update
+
+clean: ## Compatibility wrapper for: dotfiles clean
+	@DOTPATH=$(DOTPATH) bash $(DOTPATH)/bin/dotfiles clean
 
 test: ## Run the local Bats test suite
 	@bash $(DOTPATH)/test/run_tests.sh --ci
@@ -47,11 +50,11 @@ test-bats: test ## Alias for the local Bats test suite
 test-rebuild: ## Rebuild Docker images without cache
 	@$(MAKE) -C $(DOTPATH)/test/docker build-clean
 
-test-docker: ## Test the current working tree on Ubuntu and Arch Linux
-	@$(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local test-archlinux-local
+test-docker: ## Run the default installation integration test on Ubuntu
+	@SKIP_BATS_TESTS=true $(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local
 
-test-docker-all: ## Run local and remote Docker tests on both Linux distributions
-	@$(MAKE) -C $(DOTPATH)/test/docker test-all
+test-docker-all: ## Run installation integration tests on Ubuntu and Arch Linux
+	@SKIP_BATS_TESTS=true $(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local test-archlinux-local
 
 test-docker-ubuntu: ## Test the current working tree on Ubuntu
 	@$(MAKE) -C $(DOTPATH)/test/docker test-ubuntu-local

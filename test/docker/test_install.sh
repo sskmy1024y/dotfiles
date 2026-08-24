@@ -140,8 +140,6 @@ verify_installation() {
     
     echo -e "\n--- Checking directories ---"
     assert_exists "$HOME/.dotfiles" "Dotfiles directory"
-    echo "DEBUG: About to check .local/bin"
-    ls -la "$HOME/.local/" 2>&1 || echo "DEBUG: .local does not exist"
     assert_exists "$HOME/.local/bin" "Local bin directory"
     assert_exists "$HOME/.zsh" "Zsh config directory"
     assert_exists "$HOME/.ssh" "SSH directory"
@@ -151,7 +149,6 @@ verify_installation() {
     assert_symlink "$HOME/.zshrc" "Zsh config"
     assert_symlink "$HOME/.gitconfig" "Git config"
     assert_symlink "$HOME/.gitignore.global" "Git ignore"
-    assert_symlink "$HOME/.tmux.conf" "Tmux config"
     assert_symlink "$HOME/.codex/AGENTS.md" "Codex global instructions"
     
     echo -e "\n--- Checking zsh configs ---"
@@ -168,7 +165,6 @@ verify_installation() {
     assert_exists "$HOME/.ssh/authorized_keys" "SSH authorized_keys"
     assert_exists "$HOME/.ssh/github-key" "GitHub SSH private key"
     assert_exists "$HOME/.ssh/github-key.pub" "GitHub SSH public key"
-    assert_exists "$HOME/.tmux/plugins/tpm" "TPM installation"
     assert_exists "$(command -v jq || true)" "jq command"
 
     # Check permissions
@@ -232,7 +228,8 @@ test_cleanup() {
     if terraform -chdir=terraform destroy -auto-approve \
         -var=enable_brew=false \
         -var=enable_macos_defaults=false \
-        -var=enable_1password_ssh=false; then
+        -var=enable_1password_ssh=false \
+        -var=enable_macos_tode=false; then
         echo -e "${GREEN}✓${NC} terraform destroy succeeded"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else

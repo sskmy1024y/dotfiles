@@ -18,10 +18,11 @@ terraform plan
 terraform apply
 ```
 
-The remote installer wraps that flow:
+The CLI and remote installer wrap that flow:
 
 ```sh
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/etc/bootstrap)"
+curl -fsSL https://raw.githubusercontent.com/sskmy1024y/dotfiles/master/install.sh | sh
+dotfiles plan
 ```
 
 To apply only one part:
@@ -37,13 +38,14 @@ terraform apply -target=module.macos_defaults
 - `enable_brew`: run `brew bundle` from `etc/scripts/install.d/Brewfile`.
 - `enable_macos_defaults`: write macOS defaults.
 - `enable_1password_ssh`: link the 1Password SSH config.
+- `enable_macos_tode`: link the Tode and Ghostty integration on macOS.
 
 All are enabled by default because this Terraform entrypoint currently targets
 the macOS workflow. Disable them explicitly when testing on non-macOS hosts.
 
 ## Scope
 
-This intentionally does not replace every shell side effect yet. TPM cloning,
-SSH key generation on Linux, Touch ID sudo configuration, Cica font downloads,
+This intentionally does not replace every shell side effect yet. SSH key
+generation on Linux, Touch ID sudo configuration, Cica font downloads,
 and Gatekeeper changes remain in the shell scripts because they either require
 network access, sudo, or host-specific branching.

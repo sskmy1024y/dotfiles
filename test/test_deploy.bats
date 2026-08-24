@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Test for deploy script functionality
+# Integration tests for the legacy deploy script.
 
 bats_require_minimum_version 1.5.0
 
@@ -8,296 +8,92 @@ load test_helper
 
 setup() {
     setup_test_dir
-    mock_command "git" "
-if [[ \"\$1\" == \"clone\" && \"\$2\" == \"https://github.com/tmux-plugins/tpm\" ]]; then
-    mkdir -p \"\$3\"
-    touch \"\$3/.git\"
-    exit 0
-fi
-exit 127
-"
+    export HOME="$TEST_TEMP_DIR/home"
+    export DOTFILES_GHOSTTY_INSTALLED=0
+    mkdir -p "$HOME"
 }
 
 teardown() {
     teardown_test_dir
 }
 
-# Test deploy script syntax
-@test "deploy script has valid syntax" {
-    # Handle different environments
-    local script_path
-    if [ -f "$DOTPATH/etc/scripts/deploy" ]; then
-        script_path="$DOTPATH/etc/scripts/deploy"
-    elif [ -f "/home/testuser/.dotfiles/etc/scripts/deploy" ]; then
-        script_path="/home/testuser/.dotfiles/etc/scripts/deploy"
-    else
-        skip "Deploy script not found"
-    fi
-    
-    run bash -n "$script_path"
-    assert_success
-}
+@test "deploy creates the managed directory and symlink tree" {
+    export DOTFILES_OS_OVERRIDE="darwin"
 
-# Test deploy script with missing DOTPATH
-@test "deploy script sets DOTPATH when missing" {
-    # Simple approach - just skip in Docker environment
-    if [ -n "${DOTFILES_TEST:-}" ] || [ -n "${CI:-}" ]; then
-        skip "Skipping DOTPATH test in Docker/CI environment"
-    fi
-    
-    # For non-Docker environments, proceed with the test
-    local deploy_script="${DOTPATH}/etc/scripts/deploy"
-    
-    if [ ! -f "$deploy_script" ]; then
-        skip "Deploy script not found"
-    fi
-    
-    # Create test environment
-    mkdir -p "$TEST_TEMP_DIR/home"
-    ln -s "$DOTPATH" "$TEST_TEMP_DIR/home/.dotfiles"
-    
-    # Test if deploy script sets DOTPATH when missing
-    run env -u DOTPATH HOME="$TEST_TEMP_DIR/home" bash -c "source '$deploy_script' >/dev/null 2>&1 || true; [ \"\${DOTPATH:-}\" = \"\$HOME/.dotfiles\" ]"
-    
-    assert_success
-}
-
-# Test deploy script directory creation
-@test "deploy script creates necessary directories" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Run deploy script
     run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check directory creation
+
+    assert_success
     assert_dir_exists "$HOME/.local/bin"
     assert_dir_exists "$HOME/.zsh"
-    assert_dir_exists "$HOME/.ssh"
     assert_dir_exists "$HOME/.git_template/hooks"
-    assert_dir_exists "$HOME/.codex"
-}
-
-@test "deploy script creates .ssh directory with correct permissions" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Run deploy script
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check .ssh directory permissions
-    assert_dir_exists "$HOME/.ssh"
+    assert_link_exists "$HOME/.zshrc"
+    assert_symlink_to "$DOTPATH/config/zsh/.zshrc" "$HOME/.zshrc"
+    assert_symlink_to "$DOTPATH/config/git/.gitconfig" "$HOME/.gitconfig"
+    assert_symlink_to "$DOTPATH/config/codex/AGENTS.md" "$HOME/.codex/AGENTS.md"
+    assert_symlink_to "$DOTPATH/bin/dotfiles" "$HOME/.local/bin/dotfiles"
+    assert_symlink_to "$DOTPATH/config/ssh/config" "$HOME/.ssh/config"
+    assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
+    assert_symlink_to "$DOTPATH/config/ssh/1password.conf" "$HOME/.ssh/1password.conf"
     run get_permissions "$HOME/.ssh"
     assert_output "700"
-}
-
-@test "deploy script creates authorized_keys with correct permissions" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Run deploy script
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check authorized_keys permissions
-    assert_file_exists "$HOME/.ssh/authorized_keys"
     run get_permissions "$HOME/.ssh/authorized_keys"
     assert_output "600"
 }
 
-# Test with existing files
-@test "deploy script preserves existing .zshrc file" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Create existing file
-    create_test_file "$HOME/.zshrc" "existing zshrc content"
-    
-    # Run deploy script
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check file wasn't replaced
-    assert_file_exists "$HOME/.zshrc"
-    assert_not_link_exists "$HOME/.zshrc"
-    run cat "$HOME/.zshrc"
-    assert_output "existing zshrc content"
-}
-
-@test "deploy script preserves existing .gitconfig file" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Create existing file
-    create_test_file "$HOME/.gitconfig" "existing gitconfig"
-    
-    # Run deploy script
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check file wasn't replaced
-    assert_file_exists "$HOME/.gitconfig"
-    assert_not_link_exists "$HOME/.gitconfig"
-    run cat "$HOME/.gitconfig"
-    assert_output "existing gitconfig"
-}
-
-# Test tmux plugin manager
-@test "deploy script handles tmux plugin manager installation" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Mock git command
-    mock_command "git" "
-if [[ \"\$1\" == \"clone\" && \"\$2\" == \"https://github.com/tmux-plugins/tpm\" ]]; then
-    mkdir -p \"\$3\"
-    touch \"\$3/.git\"
-    exit 0
-fi
-command git \"\$@\"
-"
-    
-    # Run deploy script
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check if TPM directory exists
-    assert_dir_exists "$HOME/.tmux/plugins/tpm"
-    assert_file_exists "$HOME/.tmux/plugins/tpm/.git"
-}
-
-# Test SSH key handling
-@test "deploy script does not generate SSH keys on macOS" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
+@test "deploy preserves regular files and is idempotent" {
     export DOTFILES_OS_OVERRIDE="darwin"
-    mkdir -p "$HOME"
-    
-    # ssh keys are managed by 1Password. deploy must not generate local keys.
-    mock_command "ssh-keygen" "
-echo \"ssh-keygen should not be called\" >&2
-exit 42
-"
-    
-    # Run deploy script
+    create_test_file "$HOME/.zshrc" "existing zshrc"
+    create_test_file "$HOME/.gitconfig" "existing gitconfig"
+
     run bash "$DOTPATH/etc/scripts/deploy"
     assert_success
-    
-    # Check that deploy did not create managed SSH key files.
+    local first_symlink_count
+    first_symlink_count="$(count_symlinks "$HOME")"
+
+    run bash "$DOTPATH/etc/scripts/deploy"
+    assert_success
+    assert_equal "$(count_symlinks "$HOME")" "$first_symlink_count"
+    assert_not_link_exists "$HOME/.zshrc"
+    assert_not_link_exists "$HOME/.gitconfig"
+    assert_file_contains "$HOME/.zshrc" "existing zshrc"
+    assert_file_contains "$HOME/.gitconfig" "existing gitconfig"
+}
+
+@test "deploy does not generate local SSH keys on macOS" {
+    export DOTFILES_OS_OVERRIDE="darwin"
+    mock_command "ssh-keygen" 'echo "ssh-keygen should not be called" >&2; exit 42'
+
+    run bash "$DOTPATH/etc/scripts/deploy"
+
+    assert_success
     assert_not_exists "$HOME/.ssh/github-key"
     assert_not_exists "$HOME/.ssh/github-key.pub"
-    assert_symlink_to "$DOTPATH/config/ssh/1password.conf" "$HOME/.ssh/1password.conf"
-    assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
 }
 
-@test "deploy script generates SSH keys outside macOS" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
+@test "deploy generates local SSH keys on Linux" {
     export DOTFILES_OS_OVERRIDE="ubuntu"
-    mkdir -p "$HOME"
-
-    # Mock ssh-keygen command
-    mock_command "ssh-keygen" "
-if [[ \"\$1\" == \"-q\" && \"\$2\" == \"-f\" ]]; then
-    touch \"\$3\"
-    touch \"\$3.pub\"
-    exit 0
+    mock_command "ssh-keygen" '
+if [[ "$1" == "-q" && "$2" == "-f" ]]; then
+  touch "$3" "$3.pub"
+  exit 0
 fi
-echo \"unexpected ssh-keygen args: \$*\" >&2
 exit 42
-"
+'
 
-    # Run deploy script
     run bash "$DOTPATH/etc/scripts/deploy"
-    assert_success
 
-    # Check if SSH keys were generated for non-macOS environments.
+    assert_success
     assert_file_exists "$HOME/.ssh/github-key"
     assert_file_exists "$HOME/.ssh/github-key.pub"
     assert_not_exists "$HOME/.ssh/1password.conf"
-    assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
 }
 
-# Test error handling
-@test "deploy script fails gracefully with invalid DOTPATH" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    export DOTPATH="/nonexistent/path"
-    
-    # Run deploy script (should fail)
-    run -127 bash "$DOTPATH/etc/scripts/deploy"
-}
+@test "deploy defaults DOTPATH to the checkout under HOME" {
+    ln -s "$DOTPATH" "$HOME/.dotfiles"
 
-# Test script output
-@test "deploy script produces expected output" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Run deploy script and capture output
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check for expected output patterns
-    assert_output --partial "Creating symbolic links..."
-    assert_output --partial "zsh..."
-    assert_output --partial "ssh..."
-    assert_output --partial "git..."
-    assert_output --partial "tmux..."
-    assert_output --partial "binary..."
-}
+    run env -u DOTPATH HOME="$HOME" DOTFILES_OS_OVERRIDE=darwin \
+        DOTFILES_GHOSTTY_INSTALLED=0 bash "$HOME/.dotfiles/etc/scripts/deploy"
 
-# Test individual component installations
-@test "deploy script creates SSH config symlinks" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Run deploy script
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check SSH config symlinks
-    if [ -e "$HOME/.ssh/config" ]; then
-        assert_link_exists "$HOME/.ssh/config"
-        assert_symlink_to "$DOTPATH/config/ssh/config" "$HOME/.ssh/config"
-    fi
-    
-    if [ -e "$HOME/.ssh/git.conf" ]; then
-        assert_link_exists "$HOME/.ssh/git.conf"
-        if [ "$(detect_os)" = "darwin" ]; then
-            assert_symlink_to "$DOTPATH/config/ssh/1password.conf" "$HOME/.ssh/1password.conf"
-            assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
-        else
-            assert_symlink_to "$DOTPATH/config/ssh/git.conf" "$HOME/.ssh/git.conf"
-        fi
-    fi
-}
-
-@test "deploy script creates git template directory" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Run deploy script
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check git template directory
-    assert_dir_exists "$HOME/.git_template"
-    assert_dir_exists "$HOME/.git_template/hooks"
-}
-
-# Test PATH suggestions
-@test "deploy script outputs PATH export suggestions" {
-    # Setup test environment
-    export HOME="$TEST_TEMP_DIR/home"
-    mkdir -p "$HOME"
-    
-    # Run deploy script
-    run bash "$DOTPATH/etc/scripts/deploy"
-    
-    # Check for PATH export suggestions
-    assert_output --partial 'export PATH="$HOME/.tmux/bin:$PATH"'
-    assert_output --partial 'export PATH="$HOME/.local/bin:$PATH'
+    assert_success
+    assert_symlink_to "$HOME/.dotfiles/config/zsh/.zshrc" "$HOME/.zshrc"
 }

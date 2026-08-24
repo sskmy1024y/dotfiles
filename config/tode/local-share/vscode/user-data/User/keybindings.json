@@ -1,0 +1,43 @@
+//
+[
+  {
+    "key": "ctrl+c",
+    "command": "tode.confirmQuit",
+    "when": "!terminalFocus && !editorHasSelection && (!inputFocus || editorTextFocus)"
+  },
+  {
+    "key": "ctrl+,",
+    "command": "workbench.action.openSettings",
+    "when": "!terminalFocus"
+  },
+  {
+    "key": "ctrl+cmd+n",
+    "command": "workbench.action.files.newUntitledFile",
+    "when": "!terminalFocus"
+  },
+  {
+    "key": "ctrl+cmd+t",
+    "command": "workbench.action.showAllSymbols",
+    "when": "!terminalFocus"
+  },
+  {
+    "key": "cmd+k alt+cmd+right",
+    "command": "workbench.action.moveEditorToRightGroup"
+  },
+  {
+    "key": "cmd+k alt+cmd+left",
+    "command": "workbench.action.moveEditorToLeftGroup"
+  },
+  {
+    "key": "shift+enter",
+    "command": "workbench.action.terminal.sendSequence",
+    "args": {
+      "text": "\\\r\n"
+    },
+    "when": "terminalFocus"
+  },
+  {
+    "key": "ctrl+shift+a",
+    "command": "-cursorLineStartSelect"
+  }
+]

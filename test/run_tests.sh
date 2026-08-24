@@ -109,11 +109,12 @@ run_bats_test() {
 # Run all tests
 run_all_tests() {
     local test_files=(
+        "test_cli.bats:Unit Tests - Dotfiles CLI"
         "test_header.bats:Unit Tests - Header Functions"
         "test_bootstrap.bats:Unit Tests - Bootstrap"
         "test_macos.bats:Unit Tests - macOS Helpers"
-        "test_symlink.bats:Integration Tests - Symlinks"
         "test_deploy.bats:Integration Tests - Deploy Script"
+        "test_tode.bats:Integration Tests - Tode Configuration"
         "test_syntax.bats:Code Quality - Syntax & Linting"
     )
     
@@ -188,6 +189,9 @@ test_individual() {
         deploy)
             run_bats_test "Deploy Script Tests" "$TEST_DIR/test_deploy.bats"
             ;;
+        tode)
+            run_bats_test "Tode Configuration Tests" "$TEST_DIR/test_tode.bats"
+            ;;
         syntax)
             run_bats_test "Syntax Tests" "$TEST_DIR/test_syntax.bats"
             ;;
@@ -204,7 +208,7 @@ test_individual() {
             ;;
         *)
             echo -e "${RED}Error: Unknown test: $test${NC}"
-            echo "Available tests: header, symlink, macos, deploy, syntax"
+            echo "Available tests: header, symlink, macos, deploy, tode, syntax"
             echo "Or specify a .bats file directly"
             exit 1
             ;;

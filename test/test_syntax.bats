@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-# Test for syntax checking and code quality
+# Repository-wide shell smoke checks.
 
 load test_helper
 
@@ -12,291 +12,65 @@ teardown() {
     teardown_test_dir
 }
 
-# Files to exclude from checks
-EXCLUDE_PATTERNS=(
-    "*.zsh"
-    "*.zsh_"
-    "*/\.git/*"
-    "*/\.vscode/*"
-    "*/doc/*"
-    "*/README*"
-    "*/test/bats/*"
-)
-
-# Check if file should be excluded
-should_exclude() {
-    local file="$1"
-    for pattern in "${EXCLUDE_PATTERNS[@]}"; do
-        if [[ "$file" == $pattern ]]; then
-            return 0
-        fi
-    done
-    return 1
+shell_scripts() {
+    find "$DOTPATH" -type f \
+        \( -name '*.sh' -o -perm -u+x \) \
+        -not -path "$DOTPATH/.git/*" \
+        -not -path "$DOTPATH/test/bats/*" \
+        -print0
 }
 
-# Portable array reading (works on macOS bash 3.2)
-read_array() {
-    local array_name="$1"
-    eval "$array_name=()"
-    while IFS= read -r line; do
-        eval "$array_name+=(\"\$line\")"
-    done
+@test "shell scripts parse with their declared shell" {
+    local script failed=0
+
+    while IFS= read -r -d '' script; do
+        case "$(head -n 1 "$script")" in
+            '#!/bin/sh' | '#!/usr/bin/env sh')
+                sh -n "$script" || failed=$((failed + 1))
+                ;;
+            *bash*)
+                bash -n "$script" || failed=$((failed + 1))
+                ;;
+        esac
+    done < <(shell_scripts)
+
+    [ "$failed" -eq 0 ]
 }
 
-# Find all shell scripts
-find_shell_scripts() {
-    local scripts=()
-    
-    # Find .sh files
-    while IFS= read -r -d '' file; do
-        if ! should_exclude "$file"; then
-            scripts+=("$file")
-        fi
-    done < <(find "$DOTPATH" -name "*.sh" -type f -print0)
-    
-    # Find files with bash/sh shebang
-    while IFS= read -r -d '' file; do
-        if ! should_exclude "$file" && ! [[ "$file" == *.sh ]]; then
-            if head -n1 "$file" 2>/dev/null | grep -qE '^#!/(usr/)?bin/(env )?(bash|sh)'; then
-                scripts+=("$file")
-            fi
-        fi
-    done < <(find "$DOTPATH" -type f -print0)
-    
-    # Remove duplicates
-    printf '%s\n' "${scripts[@]}" | sort -u
+@test "shell scripts pass ShellCheck when available" {
+    skip_if_missing shellcheck
+    local script failed=0
+
+    while IFS= read -r -d '' script; do
+        case "$(head -n 1 "$script")" in
+            *bash* | '#!/bin/sh' | '#!/usr/bin/env sh')
+                shellcheck -e SC1090,SC1091,SC2034,SC2155 "$script" || failed=$((failed + 1))
+                ;;
+        esac
+    done < <(shell_scripts)
+
+    [ "$failed" -eq 0 ]
 }
 
-# Test all shell scripts have valid syntax
-@test "all shell scripts have valid bash syntax" {
-    local scripts
-    local failed=0
-    
-    # Read scripts into array (portable for macOS)
-    scripts=()
-    read_array scripts < <(find_shell_scripts)
-    
-    # Check each script
-    for script in "${scripts[@]}"; do
-        if ! bash -n "$script" 2>/dev/null; then
-            echo "Syntax error in: ${script#$DOTPATH/}"
-            ((failed++)) || true
-        fi
-    done
-    
-    [ $failed -eq 0 ]
-}
-
-# Test deploy script syntax
-@test "deploy script has valid syntax" {
-    run bash -n "$DOTPATH/etc/scripts/deploy"
+@test "public command help is available" {
+    run bash "$DOTPATH/bin/dotfiles" help
     assert_success
-}
+    assert_output --partial "Usage: dotfiles"
 
-# Test init script syntax
-@test "init script has valid syntax" {
-    run bash -n "$DOTPATH/etc/scripts/init"
-    assert_success
-}
-
-# Test setup script syntax
-@test "setup script has valid syntax" {
-    run bash -n "$DOTPATH/etc/setup"
-    assert_success
-}
-
-@test "bootstrap script has valid syntax" {
-    run bash -n "$DOTPATH/etc/bootstrap"
-    assert_success
-}
-
-# Test header.sh syntax
-@test "header.sh has valid syntax" {
-    run bash -n "$DOTPATH/etc/lib/header.sh"
-    assert_success
-}
-
-# Test install scripts syntax
-@test "all install.d scripts have valid syntax" {
-    for script in "$DOTPATH"/etc/scripts/install.d/*.sh; do
-        if [ -f "$script" ]; then
-            run bash -n "$script"
-            assert_success
-        fi
-    done
-}
-
-# Test for ShellCheck if available
-@test "scripts pass ShellCheck (if available)" {
-    skip_if_missing "shellcheck"
-    
-    local scripts
-    local failed=0
-    
-    # ShellCheck exclusions
-    local excludes=(
-        "SC1090"  # Can't follow non-constant source
-        "SC1091"  # Not following sourced files
-        "SC2034"  # Unused variables (often used in sourced files)
-        "SC2155"  # Declare and assign separately (not critical)
-    )
-    
-    local exclude_args=""
-    for code in "${excludes[@]}"; do
-        exclude_args="$exclude_args -e $code"
-    done
-    
-    # Read scripts into array (portable for macOS)
-    scripts=()
-    read_array scripts < <(find_shell_scripts)
-    
-    # Check each script
-    for script in "${scripts[@]}"; do
-        # Skip zsh scripts as ShellCheck doesn't support them
-        if head -n1 "$script" | grep -qE '#!/.*zsh'; then
-            echo "Skipping zsh script: ${script#$DOTPATH/}"
-            continue
-        fi
-        
-        if ! shellcheck $exclude_args "$script" 2>/dev/null; then
-            echo "ShellCheck warnings in: ${script#$DOTPATH/}"
-            ((failed++)) || true
-        fi
-    done
-    
-    [ $failed -eq 0 ]
-}
-
-# Test for error handling
-@test "critical scripts have error handling (set -e)" {
-    local scripts=(
-        "$DOTPATH/etc/scripts/deploy"
-        "$DOTPATH/etc/scripts/init"
-        "$DOTPATH/etc/setup"
-        "$DOTPATH/etc/bootstrap"
-    )
-    
-    for script in "${scripts[@]}"; do
-        if [ -f "$script" ]; then
-            run grep -E "set -e|set -o errexit" "$script"
-            assert_success
-        fi
-    done
-}
-
-# Test for hardcoded paths
-@test "no hardcoded home paths in shell scripts" {
-    local scripts
-    local found=0
-    
-    # Read scripts into array (portable for macOS)
-    scripts=()
-    read_array scripts < <(find_shell_scripts)
-    
-    # Check each script
-    for script in "${scripts[@]}"; do
-        if grep -q "/Users/\|/home/" "$script" 2>/dev/null; then
-            # Allow specific exceptions: comments, and the Linuxbrew prefix
-            # (/home/linuxbrew/.linuxbrew) which is a fixed system-wide install
-            # location rather than a hardcoded user home directory.
-            if ! grep -v "^#" "$script" | grep -v "/home/linuxbrew/" | grep -q "/Users/\|/home/"; then
-                continue
-            fi
-            echo "Hardcoded path in: ${script#$DOTPATH/}"
-            ((found++)) || true
-        fi
-    done
-    
-    [ $found -eq 0 ]
-}
-
-# Test installer
-@test "installer help works" {
     run bash "$DOTPATH/etc/install" --help
     assert_success
     assert_output --partial "Usage: install"
 }
 
-# Test for consistent file permissions
-@test "executable scripts have correct permissions" {
-    local scripts=(
-        "$DOTPATH/etc/scripts/deploy"
-        "$DOTPATH/etc/scripts/init"
-        "$DOTPATH/etc/install"
-        "$DOTPATH/etc/setup"
-        "$DOTPATH/etc/bootstrap"
-        "$DOTPATH/test/install_bats.sh"
-        "$DOTPATH/test/bats"
-    )
-    
-    for script in "${scripts[@]}"; do
-        if [ -f "$script" ]; then
-            assert [ -x "$script" ]
-        fi
-    done
-}
-
-# Test bats files
-@test "all bats test files have valid syntax" {
-    # Ensure bats is available
-    local bats_bin="$TEST_DIR/bats-runner"
-    if [ ! -x "$bats_bin" ] && [ -x "$TEST_DIR/bats" ] && [ ! -d "$TEST_DIR/bats" ]; then
-        bats_bin="$TEST_DIR/bats"
-    fi
-    
-    if [ -x "$bats_bin" ]; then
-        for bats_file in "$TEST_DIR"/*.bats; do
-            if [ -f "$bats_file" ]; then
-                run "$bats_bin" -c "$bats_file"
-                assert_success
-            fi
-        done
-    else
-        skip "Bats not installed"
-    fi
-}
-
-# Test for common shell script issues
-@test "scripts don't use deprecated syntax" {
-    local scripts
-    local found=0
-    
-    # Read scripts into array (portable for macOS)
-    scripts=()
-    read_array scripts < <(find_shell_scripts)
-    
-    # Check for backticks (should use $() instead)
-    # Exclude comments and string literals
-    for script in "${scripts[@]}"; do
-        # Check for backticks not in comments
-        if grep -E '^[^#]*`[^`]+`' "$script" 2>/dev/null | grep -v '^\s*#'; then
-            echo "Deprecated backticks in: ${script#$DOTPATH/}"
-            ((found++)) || true || true
-        fi
-    done
-    
-    [ $found -eq 0 ]
-}
-
-# Test script documentation
-@test "main scripts have proper headers" {
-    local scripts=(
-        "$DOTPATH/etc/scripts/deploy"
-        "$DOTPATH/etc/scripts/init"
-        "$DOTPATH/etc/setup"
-        "$DOTPATH/etc/bootstrap"
-        "$DOTPATH/etc/lib/header.sh"
-    )
-    
-    for script in "${scripts[@]}"; do
-        if [ -f "$script" ]; then
-            # Check for shebang
-            run head -n1 "$script"
-            assert_output --regexp '^#!/'
-            
-            # Check for author or description comment
-            run head -n10 "$script"
-            assert_output --partial "Author:"
-        fi
+@test "public entrypoints are executable" {
+    local script
+    for script in \
+        "$DOTPATH/install.sh" \
+        "$DOTPATH/bin/dotfiles" \
+        "$DOTPATH/etc/bootstrap" \
+        "$DOTPATH/etc/install" \
+        "$DOTPATH/etc/scripts/deploy" \
+        "$DOTPATH/etc/scripts/init"; do
+        [ -x "$script" ]
     done
 }

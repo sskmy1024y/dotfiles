@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "terminal": "ghostty",
+  "choices": {
+    "shift+cmd+,": {
+      "choice": "keep"
+    },
+    "cmd+,": {
+      "choice": "editor",
+      "key": "ctrl+,",
+      "command": "workbench.action.openSettings"
+    },
+    "shift+cmd+j": {
+      "choice": "keep"
+    },
+    "ctrl+shift+tab": {
+      "choice": "keep"
+    },
+    "ctrl+tab": {
+      "choice": "keep"
+    },
+    "cmd+enter": {
+      "choice": "terminal",
+      "action": "toggle_fullscreen"
+    },
+    "shift+cmd+enter": {
+      "choice": "keep"
+    },
+    "shift+cmd+p": {
+      "choice": "terminal",
+      "key": "ctrl+shift+p",
+      "action": "toggle_command_palette"
+    },
+    "cmd+q": {
+      "choice": "keep"
+    },
+    "cmd+k": {
+      "choice": "keep"
+    },
+    "cmd+a": {
+      "choice": "terminal",
+      "key": "ctrl+shift+a",
+      "action": "select_all"
+    },
+    "claim:ctrl+shift+a:cursorLineStartSelect": {
+      "choice": "terminal",
+      "action": "cursorLineStartSelect",
+      "guard": "textInputFocus"
+    },
+    "shift+cmd+t": {
+      "choice": "terminal",
+      "key": "ctrl+shift+t",
+      "action": "undo"
+    },
+    "cmd+z": {
+      "choice": "terminal",
+      "action": "undo"
+    },
+    "shift+cmd+z": {
+      "choice": "terminal",
+      "key": "ctrl+shift+z",
+      "action": "redo"
+    },
+    "cmd+home": {
+      "choice": "keep"
+    },
+    "cmd+end": {
+      "choice": "keep"
+    },
+    "cmd+pageup": {
+      "choice": "keep"
+    },
+    "cmd+pagedown": {
+      "choice": "keep"
+    },
+    "cmd+n": {
+      "choice": "editor",
+      "key": "ctrl+cmd+n",
+      "command": "workbench.action.files.newUntitledFile"
+    },
+    "cmd+w": {
+      "choice": "terminal",
+      "key": "ctrl+shift+w",
+      "action": "close_surface"
+    },
+    "alt+cmd+w": {
+      "choice": "terminal",
+      "key": "ctrl+alt+w",
+      "action": "close_tab:this"
+    },
+    "shift+cmd+w": {
+      "choice": "keep"
+    },
+    "cmd+t": {
+      "choice": "editor",
+      "key": "ctrl+cmd+t",
+      "command": "workbench.action.showAllSymbols"
+    },
+    "shift+cmd+[": {
+      "choice": "keep"
+    },
+    "shift+cmd+]": {
+      "choice": "keep"
+    },
+    "cmd+d": {
+      "choice": "terminal",
+      "key": "ctrl+shift+d",
+      "action": "new_split:right"
+    },
+    "shift+cmd+d": {
+      "choice": "keep"
+    },
+    "cmd+[": {
+      "choice": "keep"
+    },
+    "cmd+]": {
+      "choice": "keep"
+    },
+    "alt+cmd+up": {
+      "choice": "terminal",
+      "action": "goto_split:up"
+    },
+    "alt+cmd+down": {
+      "choice": "terminal",
+      "action": "goto_split:down"
+    },
+    "ctrl+cmd+up": {
+      "choice": "keep"
+    },
+    "ctrl+cmd+down": {
+      "choice": "keep"
+    },
+    "ctrl+cmd+left": {
+      "choice": "keep"
+    },
+    "ctrl+cmd+right": {
+      "choice": "keep"
+    },
+    "cmd+f": {
+      "choice": "terminal",
+      "key": "ctrl+shift+f",
+      "action": "start_search"
+    },
+    "ctrl+cmd+f": {
+      "choice": "keep"
+    }
+  }
+}

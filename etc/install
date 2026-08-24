@@ -65,6 +65,7 @@ mode="apply"
 enable_brew="true"
 enable_macos_defaults="true"
 enable_1password_ssh="true"
+enable_macos_tode="true"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -111,6 +112,7 @@ case "$(uname -s 2>/dev/null || true)" in
     enable_brew="false"
     enable_macos_defaults="false"
     enable_1password_ssh="false"
+    enable_macos_tode="false"
     ;;
 esac
 
@@ -483,6 +485,28 @@ confirm_apply() {
   esac
 }
 
+prepare_sudo_for_brew() {
+  local sudo_keepalive_pid
+
+  if [ "$(detect_os)" != "darwin" ] || [ "$enable_brew" != "true" ]; then
+    return 0
+  fi
+
+  if ! is_exists sudo; then
+    error "sudo is required to install or upgrade Homebrew casks"
+    return 1
+  fi
+
+  info "Authenticating administrator access before Homebrew setup..."
+  sudo -v -p '[sudo] Password for Homebrew setup: '
+
+  while sudo -n -v 2>/dev/null; do
+    sleep 60
+  done &
+  sudo_keepalive_pid=$!
+  trap 'kill '"$sudo_keepalive_pid"' 2>/dev/null || true' EXIT
+}
+
 run_terraform() {
   local terraform_dir
   terraform_dir="$DOTPATH/terraform"
@@ -492,6 +516,7 @@ run_terraform() {
     "-var=enable_macos_defaults=${enable_macos_defaults}"
     "-var=enable_1password_ssh=${enable_1password_ssh}"
     "-var=enable_linux_ssh_identity=$([ "$(detect_os)" = "linux" ] && echo true || echo false)"
+    "-var=enable_macos_tode=${enable_macos_tode}"
   )
 
   if [ ! -d "$terraform_dir" ]; then
@@ -512,6 +537,7 @@ run_terraform() {
       ;;
     apply)
       confirm_apply
+      prepare_sudo_for_brew
       info "Applying Terraform changes..."
       terraform -chdir="$terraform_dir" apply -auto-approve "${var_args[@]}"
       ;;

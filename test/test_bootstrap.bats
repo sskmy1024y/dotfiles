@@ -130,3 +130,37 @@ EOF
     assert_file_contains "$BOOTSTRAP_MARKER" "archive:--check"
     assert_output --partial "Git is not available"
 }
+
+@test "bootstrap routes commands through the installed CLI" {
+    export HOME="$TEST_TEMP_DIR/home"
+    export DOTPATH="$HOME/.dotfiles"
+    export BOOTSTRAP_MARKER="$TEST_TEMP_DIR/marker"
+    mkdir -p "$DOTPATH/etc" "$DOTPATH/bin"
+    touch "$DOTPATH/etc/install"
+    cat > "$DOTPATH/bin/dotfiles" <<'CLI'
+#!/usr/bin/env bash
+printf 'cli:%s\n' "$*" > "$BOOTSTRAP_MARKER"
+CLI
+
+    run bash "$DOTPATH_SOURCE/etc/bootstrap" check
+
+    assert_success
+    assert_file_contains "$BOOTSTRAP_MARKER" "cli:check"
+    assert_symlink_to "$DOTPATH/bin/dotfiles" "$HOME/.local/bin/dotfiles"
+}
+
+@test "POSIX install entrypoint downloads bootstrap and forwards arguments" {
+    local fixture_root="$TEST_TEMP_DIR/remote"
+    mkdir -p "$fixture_root/master/etc"
+    cat > "$fixture_root/master/etc/bootstrap" <<'BOOTSTRAP'
+#!/usr/bin/env bash
+printf 'launcher:%s\n' "$*" > "$BOOTSTRAP_MARKER"
+BOOTSTRAP
+    export BOOTSTRAP_MARKER="$TEST_TEMP_DIR/marker"
+    export DOTFILES_INSTALL_BASE_URL="file://$fixture_root"
+
+    run sh "$DOTPATH_SOURCE/install.sh" check
+
+    assert_success
+    assert_file_contains "$BOOTSTRAP_MARKER" "launcher:check"
+}
