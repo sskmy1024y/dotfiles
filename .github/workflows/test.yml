@@ -77,6 +77,8 @@ jobs:
 
   integration-test:
     name: Integration Test - ${{ matrix.os }}
+    env:
+      DOTPATH: ${{ github.workspace }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -101,6 +103,7 @@ jobs:
           done
 
           bash bin/dotfiles sync --yes --no-1password-ssh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           
       - name: Verify installation
         run: |
