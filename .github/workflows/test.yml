@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test: [header, symlink, deploy, syntax]
+        test: [cli, bootstrap, header, macos, node, tode, syntax]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -77,6 +77,8 @@ jobs:
 
   integration-test:
     name: Integration Test - ${{ matrix.os }}
+    env:
+      DOTPATH: ${{ github.workspace }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -85,22 +87,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         
-      - name: Test deployment
+      - name: Sync configuration through the CLI
         run: |
           export DOTPATH=$PWD
-          echo "Running deploy script..."
+          echo "Running dotfiles sync..."
           echo "DOTPATH: $DOTPATH"
           echo "HOME: $HOME"
           
           # Move existing files that would conflict
-          for file in .gitconfig .zshrc .bashrc; do
+          for file in .gitconfig .zshrc; do
             if [ -f "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
               echo "Moving existing $file to $file.backup"
               mv "$HOME/$file" "$HOME/$file.backup"
             fi
           done
-          
-          bash -x etc/scripts/deploy || { echo "Deploy script failed with exit code $?"; exit 1; }
+
+          bash bin/dotfiles sync --yes --no-1password-ssh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           
       - name: Verify installation
         run: |
@@ -121,20 +124,13 @@ jobs:
           test -d "$HOME/.zsh" || { echo ".zsh directory not found"; exit 1; }
           echo "Checking .local/bin directory..."
           test -d "$HOME/.local/bin" || { echo ".local/bin directory not found"; exit 1; }
-          
-      - name: Install Bats
+          echo "Checking dotfiles CLI..."
+          test -L "$HOME/.local/bin/dotfiles" || { echo "dotfiles CLI not linked"; exit 1; }
+
+      - name: Check current CLI entrypoints
         run: |
-          chmod +x test/install_bats.sh
-          ./test/install_bats.sh
-          
-      - name: Run integration tests with Bats
-        run: |
-          ./test/bats-runner test/test_symlink.bats
-          ./test/bats-runner test/test_deploy.bats
-          
-      - name: Test installer entrypoint
-        run: |
-          bash etc/install --help
+          bash bin/dotfiles check --no-packages --no-macos-defaults --no-1password-ssh
+          bash bin/dotfiles help
 
   docker-test:
     name: Docker Test - ${{ matrix.os }} - ${{ matrix.install }}
@@ -194,7 +190,7 @@ jobs:
           base: ${{ github.event.before }}
           filters: |
             brewfile:
-              - 'etc/scripts/install.d/Brewfile'
+              - 'config/homebrew/Brewfile'
 
   macos-install-test:
     name: macOS Install Test
@@ -205,7 +201,7 @@ jobs:
 
       - name: Clear conflicting dotfiles
         run: |
-          for file in .zshrc .gitconfig .gitignore.global .tmux.conf .czrc .goenvrc .ssh/config; do
+          for file in .zshrc .gitconfig .gitignore.global .czrc .goenvrc .ssh/config; do
             if [ -e "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
               echo "Moving existing $file to $file.backup"
               mkdir -p "$(dirname "$HOME/$file.backup")"
@@ -263,8 +259,7 @@ jobs:
           check_symlink "$HOME/.zshrc"
           check_symlink "$HOME/.gitconfig"
           check_symlink "$HOME/.gitignore.global"
-          check_symlink "$HOME/.tmux.conf"
-          check_symlink "$HOME/.local/bin/deploy"
+          check_symlink "$HOME/.local/bin/dotfiles"
           check_symlink "$HOME/.ssh/1password.conf"
 
           echo "--- zsh configs ---"
@@ -318,7 +313,7 @@ jobs:
 
       - name: Clear conflicting dotfiles
         run: |
-          for file in .zshrc .gitconfig .gitignore.global .tmux.conf .czrc .goenvrc .ssh/config; do
+          for file in .zshrc .gitconfig .gitignore.global .czrc .goenvrc .ssh/config; do
             if [ -e "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
               echo "Moving existing $file to $file.backup"
               mkdir -p "$(dirname "$HOME/$file.backup")"
@@ -329,7 +324,7 @@ jobs:
       - name: Apply installer with brew bundle
         run: |
           # Full apply: the Terraform brew module runs
-          # `brew bundle --file etc/scripts/install.d/Brewfile` (the real
+          # `brew bundle --file config/homebrew/Brewfile` (the real
           # production path). Gated to Brewfile changes / manual runs because
           # it pulls heavy GUI casks (docker-desktop, gcloud-cli, fonts).
           bash etc/install --yes
@@ -354,27 +349,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y shellcheck
           
-      - name: Check bash syntax
-        run: |
-          for script in $(find . -name "*.sh" -type f); do
-            echo "Checking: $script"
-            bash -n "$script"
-          done
-          bash -n etc/install
-          bash -n etc/bootstrap
-          bash -n etc/setup
-          
-      - name: Run ShellCheck
-        run: |
-          for script in $(find . -name "*.sh" -type f ! -path "./test/bats/*"); do
-            echo "Checking: $script"
-            shellcheck -e SC1090,SC1091,SC2034 "$script" || true
-          done
-          
-      - name: Install Bats and run syntax tests
+      - name: Install Bats
         run: |
           chmod +x test/install_bats.sh
           ./test/install_bats.sh
+
+      - name: Run repository syntax and lint tests
+        run: |
           ./test/bats-runner test/test_syntax.bats
 
   all-tests-summary:

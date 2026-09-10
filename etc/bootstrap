@@ -2,8 +2,8 @@
 
 # Author: sskmy1024y
 # Description: Remote one-liner entrypoint. Downloads the repository if needed,
-#              then delegates to etc/install. Git is intentionally optional so
-#              this also works before Xcode CLT is installed on macOS.
+#              installs the dotfiles CLI, and starts initial setup. Git is
+#              intentionally optional for a clean macOS installation.
 
 trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
 set -euo pipefail
@@ -75,4 +75,25 @@ if [ ! -f "$DOTPATH/etc/install" ]; then
   fi
 fi
 
-exec bash "$DOTPATH/etc/install" "$@"
+cli="$DOTPATH/bin/dotfiles"
+
+if [ ! -f "$cli" ]; then
+  # Compatibility with archive fixtures and checkouts created before the CLI.
+  exec bash "$DOTPATH/etc/install" "$@"
+fi
+
+mkdir -p "$HOME/.local/bin"
+ln -sfn "$cli" "$HOME/.local/bin/dotfiles"
+
+if [ "$#" -gt 0 ]; then
+  case "$1" in
+    -*) exec bash "$cli" install "$@" ;;
+    *) exec bash "$cli" "$@" ;;
+  esac
+fi
+
+if bash "$cli" __is_initialized; then
+  exec bash "$cli"
+fi
+
+exec bash "$cli" install

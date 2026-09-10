@@ -210,7 +210,7 @@ if ! printf '%s\n' '${TART_SSH_PASS}' \\
 fi
 
 # Verify with \`sudo -n -v\` specifically — that is the exact code path
-# the install scripts hit (\`etc/scripts/init\` runs \`sudo -v\`). \`sudo -n true\`
+# the full installer hits before applying the Homebrew bundle. \`sudo -n true\`
 # would pass with just NOPASSWD; \`sudo -n -v\` only passes when no
 # entry for this user requires authentication. If this fails we MUST
 # fail loudly here, before the scenario hangs waiting for a TTY.

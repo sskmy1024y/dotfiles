@@ -16,7 +16,7 @@ fi
 
 
 echo ""
-info "22 Install Python"
+info "Install Python"
 echo ""
 
 PYTHON_VERSION="3.14.6"
@@ -51,7 +51,7 @@ install_python(){
     info "Installed python $PYTHON_VERSION"
   else
     warn "pyenv not found. installing..."
-    bash "$DOTPATH"/etc/scripts/install.d/20_anyenv.sh
+    bash "$DOTPATH"/etc/scripts/runtimes/anyenv.sh
     anyenv_on_path
     if ! is_exists "pyenv"; then
       error "pyenv is not available after anyenv install"
@@ -67,5 +67,7 @@ install_python
 if is_exists "pipenv"; then
   info "Installed pipenv."
 else
-  brew install pipenv
+  info "Installing pipenv into the managed Python runtime"
+  pyenv exec python -m pip install --upgrade pipenv
+  pyenv rehash
 fi

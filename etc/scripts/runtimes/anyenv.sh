@@ -31,7 +31,7 @@ clone_or_skip() {
 
 install_anyenv() {
   echo ""
-  info "20 Install any environment managers"
+  info "Install anyenv and environment managers"
   echo ""
 
   if [ -d "$HOME/.anyenv/bin" ]; then

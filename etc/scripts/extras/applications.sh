@@ -17,7 +17,7 @@ fi
 
 
 echo ""
-info "97 Install applications via brew"
+info "Install optional applications via Homebrew"
 echo ""
 
 ubuntu() {
@@ -49,9 +49,7 @@ install_cask_app() {
 }
 
 darwin() {
-  # Defensive: same pattern as install.d/10_brew.sh. Running deep.d standalone
-  # (e.g. on a fresh VM where `make init` didn't add brew to the current
-  # shell's PATH) must still work without GUI prompts.
+  # Extras may be run independently, so make Homebrew available in this shell.
   if ! ensure_xcode_clt; then
     error "Cannot continue without Xcode Command Line Tools."
     return 1

@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+
+trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
+set -euo pipefail
+
+if [ -z "${DOTPATH:-}" ]; then
+  DOTPATH="$HOME/.dotfiles"
+  export DOTPATH
+fi
+
+. "$DOTPATH/etc/lib/header.sh"
+
+os="${DOTFILES_OS_OVERRIDE:-$(detect_os)}"
+if [ "$os" != "darwin" ]; then
+  exit 0
+fi
+
+ghostty_source="$DOTPATH/config/tode/ghostty"
+ghostty_target="$HOME/Library/Application Support/com.mitchellh.ghostty/tode"
+local_share_source="$DOTPATH/config/tode/local-share"
+local_share_target="$HOME/.local/share/tode"
+ghostty_config="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
+ghostty_config_line='config-file = ?tode/keybinds.ghostty'
+
+managed_file_symlink() {
+  local source="$1"
+  local target="$2"
+
+  mkdir -p "$(dirname "$target")"
+
+  if [ -L "$target" ] || [ ! -e "$target" ]; then
+    ln -sfn "$source" "$target"
+  elif [ -f "$target" ] && cmp -s "$source" "$target"; then
+    ln -sfn "$source" "$target"
+  else
+    warn "$target already exists with different contents; skip symlink"
+  fi
+}
+
+sync_tree() {
+  local source_root="$1"
+  local target_root="$2"
+  local source relative
+
+  if [ ! -d "$source_root" ]; then
+    warn "$source_root not found; skip tode sync"
+    return 0
+  fi
+
+  while IFS= read -r -d '' source; do
+    relative="${source#"$source_root"/}"
+    managed_file_symlink "$source" "$target_root/$relative"
+  done < <(find "$source_root" -type f -print0)
+}
+
+clean_tree() {
+  local source_root="$1"
+  local target_root="$2"
+  local source relative target
+
+  [ -d "$source_root" ] || return 0
+
+  while IFS= read -r -d '' source; do
+    relative="${source#"$source_root"/}"
+    target="$target_root/$relative"
+    if [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+      unlink "$target"
+    fi
+  done < <(find "$source_root" -type f -print0)
+}
+
+ghostty_is_installed() {
+  case "${DOTFILES_GHOSTTY_INSTALLED:-}" in
+    1) return 0 ;;
+    0) return 1 ;;
+  esac
+
+  [ -d "$HOME/Applications/Ghostty.app" ] \
+    || [ -d "/Applications/Ghostty.app" ] \
+    || command -v ghostty >/dev/null 2>&1
+}
+
+ensure_ghostty_config() {
+  ghostty_is_installed || return 0
+
+  mkdir -p "$(dirname "$ghostty_config")"
+  if [ -f "$ghostty_config" ] \
+    && grep -Eq '^[[:space:]]*config-file[[:space:]]*=[[:space:]]*\?tode/keybinds\.ghostty[[:space:]]*$' "$ghostty_config"; then
+    return 0
+  fi
+
+  if [ -e "$ghostty_config" ] && [ ! -f "$ghostty_config" ]; then
+    warn "$ghostty_config is not a regular file; skip config update"
+    return 0
+  fi
+
+  if [ -s "$ghostty_config" ] && [ "$(tail -c 1 "$ghostty_config" | wc -l | tr -d ' ')" = "0" ]; then
+    printf '\n' >> "$ghostty_config"
+  fi
+  printf '%s\n' "$ghostty_config_line" >> "$ghostty_config"
+}
+
+remove_ghostty_config() {
+  local temporary
+
+  [ -f "$ghostty_config" ] || return 0
+  grep -Fqx "$ghostty_config_line" "$ghostty_config" || return 0
+
+  temporary="$(mktemp "${ghostty_config}.tmp.XXXXXX")"
+  cp -p "$ghostty_config" "$temporary"
+  awk -v line="$ghostty_config_line" '$0 != line' "$ghostty_config" > "$temporary"
+  mv "$temporary" "$ghostty_config"
+}
+
+case "${1:-}" in
+  "")
+    info "tode..."
+    sync_tree "$ghostty_source" "$ghostty_target"
+    sync_tree "$local_share_source" "$local_share_target"
+    ensure_ghostty_config
+    ;;
+  --clean)
+    clean_tree "$ghostty_source" "$ghostty_target"
+    clean_tree "$local_share_source" "$local_share_target"
+    remove_ghostty_config
+    ;;
+  *)
+    error "Usage: $0 [--clean]"
+    exit 2
+    ;;
+esac

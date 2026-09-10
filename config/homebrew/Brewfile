@@ -27,8 +27,8 @@ cask "gcloud-cli"
 cask "docker-desktop"
 
 # Nerd Fonts — pre-patched fonts installed via Homebrew Cask.
-# Cica (Japanese-aware, Nerd Font + emoji) is handled separately in
-# deep.d/98_font.sh because miiton/Cica has no official cask.
+# Cica (Japanese-aware, Nerd Font + emoji) is handled by
+# `dotfiles extras` because miiton/Cica has no official cask.
 cask "font-meslo-lg-nerd-font"
 cask "font-jetbrains-mono-nerd-font"
 cask "font-hack-nerd-font"
