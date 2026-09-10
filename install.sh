@@ -30,9 +30,10 @@ if ! command -v bash >/dev/null 2>&1; then
   exit 1
 fi
 
-# A pipe owns stdin in `curl ... | sh`. Give prompts and sudo the terminal
-# when one is available; non-interactive environments keep their original stdin.
-if [ -r /dev/tty ] && [ -w /dev/tty ]; then
+# A pipe owns stdin in `curl ... | sh`. Give prompts and sudo the controlling
+# terminal when one is actually attached. Merely testing /dev/tty permissions
+# is insufficient in CI, where the device exists but cannot be opened.
+if (tty </dev/tty) >/dev/null 2>&1; then
   bash "$bootstrap" "$@" </dev/tty
 else
   bash "$bootstrap" "$@"

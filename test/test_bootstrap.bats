@@ -7,6 +7,7 @@ load test_helper
 setup() {
     setup_test_dir
     export DOTPATH_SOURCE="$DOTPATH"
+    unset DOTFILES_ARCHIVE_URL DOTFILES_BRANCH DOTFILES_GITHUB DOTFILES_INSTALL_BASE_URL
 }
 
 teardown() {
