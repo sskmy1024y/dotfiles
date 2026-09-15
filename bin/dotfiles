@@ -1,0 +1,278 @@
+#!/usr/bin/env bash
+
+# Author: sskmy1024y
+# Description: Command-line interface for installing and managing dotfiles.
+
+trap 'echo "Error: $0:$LINENO stopped" >&2; exit 1' ERR INT
+set -euo pipefail
+
+: "${DOTPATH:=$HOME/.dotfiles}"
+: "${XDG_STATE_HOME:=$HOME/.local/state}"
+
+state_dir="$XDG_STATE_HOME/dotfiles"
+installed_marker="$state_dir/installed"
+
+info() { printf '[+] %s\n' "$*"; }
+error() { printf '[-] %s\n' "$*" >&2; }
+
+usage() {
+  cat <<'USAGE'
+Usage: dotfiles <command> [options]
+
+Commands:
+  install     Apply the full setup: configuration, packages, and OS settings.
+  sync        Sync managed configuration without packages or OS settings.
+  runtimes    Install anyenv, Node.js, and Python.
+  extras      Install optional applications, fonts, and advanced settings.
+  plan        Preview Terraform-managed changes.
+  check       Check installer requirements without changing the system.
+  status      Show installation state and run the requirements check.
+  update      Pull the latest dotfiles repository changes.
+  clean       Destroy Terraform-managed links and settings.
+  help        Show this help.
+
+Run dotfiles without a command to open the interactive menu.
+USAGE
+}
+
+require_checkout() {
+  if [ ! -f "$DOTPATH/etc/install" ]; then
+    error "Dotfiles checkout not found: $DOTPATH"
+    error "Run the install one-liner first."
+    return 1
+  fi
+}
+
+is_initialized() {
+  if [ -f "$installed_marker" ]; then
+    return 0
+  fi
+
+  # Adopt installations created before the CLI marker was introduced.
+  [ -s "$DOTPATH/terraform/terraform.tfstate" ] &&
+    grep -q '"resources"' "$DOTPATH/terraform/terraform.tfstate"
+}
+
+record_install() {
+  mkdir -p "$state_dir"
+  date -u '+%Y-%m-%dT%H:%M:%SZ' > "$installed_marker"
+}
+
+run_install() {
+  local record=true arg
+
+  require_checkout
+  for arg in "$@"; do
+    case "$arg" in
+      --plan | --check) record=false ;;
+    esac
+  done
+  bash "$DOTPATH/etc/install" "$@"
+  if [ "$record" = true ]; then
+    record_install
+    info "Setup completed. Use 'dotfiles' to choose future actions."
+  fi
+}
+
+run_sync() {
+  require_checkout
+  bash "$DOTPATH/etc/install" --no-packages --no-macos-defaults "$@"
+}
+
+run_runtimes() {
+  local component
+
+  require_checkout
+  for component in anyenv node python; do
+    bash "$DOTPATH/etc/scripts/runtimes/${component}.sh" "$@"
+  done
+}
+
+run_extras() {
+  local component
+
+  require_checkout
+  for component in applications cica macos; do
+    bash "$DOTPATH/etc/scripts/extras/${component}.sh" "$@"
+  done
+}
+
+run_status() {
+  require_checkout
+  if is_initialized; then
+    info "Installation state: initialized"
+  else
+    info "Installation state: initial setup has not completed"
+  fi
+  bash "$DOTPATH/etc/install" --check
+}
+
+run_update() {
+  require_checkout
+  if [ ! -d "$DOTPATH/.git" ]; then
+    error "$DOTPATH is not a Git checkout; automatic update is unavailable."
+    error "Install Git, then replace this archive checkout with a Git clone."
+    return 1
+  fi
+  git -C "$DOTPATH" pull --ff-only
+}
+
+run_clean() {
+  require_checkout
+  if ! command -v terraform >/dev/null 2>&1; then
+    error "terraform: command not found"
+    return 1
+  fi
+  terraform -chdir="$DOTPATH/terraform" destroy
+}
+
+plain_menu_choice() {
+  local choice
+
+  cat >&2 <<'MENU'
+
+Dotfiles
+  1) Sync configuration
+  2) Apply full setup
+  3) Install language runtimes
+  4) Install optional extras
+  5) Preview changes
+  6) Check status
+  7) Update repository
+  q) Quit
+MENU
+  printf '> ' >&2
+  read -r choice
+  printf '%s\n' "$choice"
+}
+
+arrow_menu_choice() (
+  local -a items=(
+    "Sync configuration"
+    "Apply full setup"
+    "Install language runtimes"
+    "Install optional extras"
+    "Preview changes"
+    "Check status"
+    "Update repository"
+  )
+  local selected=0 key sequence index
+
+  restore_menu_terminal() {
+    printf '\033[?25h\033[?1049l' >&2
+  }
+
+  trap 'restore_menu_terminal' EXIT
+  trap 'exit 130' HUP INT TERM
+  printf '\033[?1049h\033[?25l' >&2
+
+  while :; do
+    printf '\033[H\033[2J' >&2
+    printf '\033[1;36mDotfiles\033[0m\n\n' >&2
+
+    for ((index = 0; index < ${#items[@]}; index++)); do
+      if [ "$index" -eq "$selected" ]; then
+        printf ' \033[7m > %-34s \033[0m\n' "${items[$index]}" >&2
+      else
+        printf '   %-36s\n' "${items[$index]}" >&2
+      fi
+    done
+
+    printf '\n \033[2m[Up/Down] Move  [Enter] Select  [q/Esc] Quit\033[0m\n' >&2
+
+    key=""
+    if ! IFS= read -r -s -n 1 key; then
+      return 1
+    fi
+
+    case "$key" in
+      '')
+        restore_menu_terminal
+        trap - EXIT HUP INT TERM
+        printf '%s\n' "$((selected + 1))"
+        return 0
+        ;;
+      k)
+        selected=$(((selected + ${#items[@]} - 1) % ${#items[@]}))
+        ;;
+      j)
+        selected=$(((selected + 1) % ${#items[@]}))
+        ;;
+      [1-7])
+        selected=$((key - 1))
+        ;;
+      q | Q)
+        return 1
+        ;;
+      $'\033')
+        sequence=""
+        if IFS= read -r -s -n 2 -t 1 sequence; then
+          case "$sequence" in
+            '[A' | OA) selected=$(((selected + ${#items[@]} - 1) % ${#items[@]})) ;;
+            '[B' | OB) selected=$(((selected + 1) % ${#items[@]})) ;;
+            *) return 1 ;;
+          esac
+        else
+          return 1
+        fi
+        ;;
+    esac
+  done
+)
+
+interactive_menu() {
+  local choice
+
+  if [ ! -t 0 ]; then
+    usage
+    return 0
+  fi
+
+  if ! is_initialized; then
+    printf 'Initial setup has not completed. Start it now? [Y/n] '
+    read -r choice
+    case "$choice" in
+      '' | [Yy] | [Yy][Ee][Ss]) run_install; return ;;
+      *) return 0 ;;
+    esac
+  fi
+
+  if [ "${TERM:-dumb}" = "dumb" ] || [ ! -t 2 ]; then
+    choice="$(plain_menu_choice)"
+  elif ! choice="$(arrow_menu_choice)"; then
+    return 0
+  fi
+
+  case "$choice" in
+    1) run_sync ;;
+    2) run_install ;;
+    3) run_runtimes ;;
+    4) run_extras ;;
+    5) bash "$DOTPATH/etc/install" --plan ;;
+    6) run_status ;;
+    7) run_update ;;
+    q | Q | '') ;;
+    *) error "Unknown selection: $choice"; return 2 ;;
+  esac
+}
+
+command_name="${1:-}"
+if [ "$#" -gt 0 ]; then
+  shift
+fi
+
+case "$command_name" in
+  '') interactive_menu ;;
+  install) run_install "$@" ;;
+  sync) run_sync "$@" ;;
+  runtimes) run_runtimes "$@" ;;
+  extras | deep) run_extras "$@" ;;
+  plan) require_checkout; bash "$DOTPATH/etc/install" --plan "$@" ;;
+  check) require_checkout; bash "$DOTPATH/etc/install" --check "$@" ;;
+  status) run_status "$@" ;;
+  update) run_update "$@" ;;
+  clean) run_clean "$@" ;;
+  help | -h | --help) usage ;;
+  __is_initialized) is_initialized ;;
+  *) error "Unknown command: $command_name"; usage >&2; exit 2 ;;
+esac

@@ -21,3 +21,9 @@ variable "enable_linux_ssh_identity" {
   type        = bool
   default     = false
 }
+
+variable "enable_macos_tode" {
+  description = "Link tode configuration into its macOS application directories."
+  type        = bool
+  default     = true
+}

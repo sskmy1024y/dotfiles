@@ -47,6 +47,7 @@ Options:
   -y, --yes                  Apply without an interactive confirmation.
       --plan                 Run terraform plan only.
       --check                Check required commands and repository presence only.
+      --no-packages          Do not install managed packages.
       --no-brew              Do not run brew bundle.
       --no-macos-defaults    Do not write macOS defaults.
       --no-1password-ssh     Do not link 1Password SSH config.
@@ -62,9 +63,11 @@ USAGE
 }
 
 mode="apply"
+enable_packages="true"
 enable_brew="true"
 enable_macos_defaults="true"
 enable_1password_ssh="true"
+enable_macos_tode="true"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -79,6 +82,10 @@ while [ "$#" -gt 0 ]; do
     --check)
       mode="check"
       ;;
+    --no-packages)
+      enable_packages="false"
+      enable_brew="false"
+      ;;
     --no-brew)
       enable_brew="false"
       ;;
@@ -91,9 +98,6 @@ while [ "$#" -gt 0 ]; do
     -h | --help)
       usage
       exit 0
-      ;;
-    init | --init | -i)
-      warn "'$1' is deprecated and ignored; the installer always performs the full setup."
       ;;
     *)
       error "Unknown option: $1"
@@ -111,6 +115,7 @@ case "$(uname -s 2>/dev/null || true)" in
     enable_brew="false"
     enable_macos_defaults="false"
     enable_1password_ssh="false"
+    enable_macos_tode="false"
     ;;
 esac
 
@@ -251,6 +256,29 @@ ensure_jq() {
   is_exists jq
 }
 
+ensure_managed_packages() {
+  if [ "$enable_packages" != "true" ] || [ "$(detect_os)" != "linux" ]; then
+    return 0
+  fi
+
+  # Homebrew packages are applied declaratively by Terraform. Linux currently
+  # has one cross-distribution interactive tool managed by the full setup.
+  if is_exists fzf; then
+    return 0
+  fi
+
+  if [ "$mode" = "plan" ]; then
+    return 0
+  fi
+
+  if [ "$mode" = "check" ]; then
+    error "fzf: command not found"
+    return 1
+  fi
+
+  install_platform_package fzf fzf && is_exists fzf
+}
+
 terraform_version() {
   if [ -n "$TERRAFORM_VERSION" ]; then
     echo "$TERRAFORM_VERSION"
@@ -359,6 +387,11 @@ missing_runtime_commands() {
     missing=1
   fi
 
+  if [ "$enable_packages" = "true" ] && [ "$(detect_os)" = "linux" ] && ! is_exists fzf; then
+    error "fzf: command not found"
+    missing=1
+  fi
+
   if [ "$enable_brew" = "true" ] && ! brew_on_path; then
     error "brew: command not found"
     missing=1
@@ -442,6 +475,11 @@ ensure_runtime_requirements() {
     print_install_hints
     exit 1
   fi
+
+  if ! ensure_managed_packages; then
+    error "Failed to install managed packages"
+    exit 1
+  fi
 }
 
 ensure_repo() {
@@ -483,6 +521,28 @@ confirm_apply() {
   esac
 }
 
+prepare_sudo_for_brew() {
+  local sudo_keepalive_pid
+
+  if [ "$(detect_os)" != "darwin" ] || [ "$enable_brew" != "true" ]; then
+    return 0
+  fi
+
+  if ! is_exists sudo; then
+    error "sudo is required to install or upgrade Homebrew casks"
+    return 1
+  fi
+
+  info "Authenticating administrator access before Homebrew setup..."
+  sudo -v -p '[sudo] Password for Homebrew setup: '
+
+  while sudo -n -v 2>/dev/null; do
+    sleep 60
+  done &
+  sudo_keepalive_pid=$!
+  trap 'kill '"$sudo_keepalive_pid"' 2>/dev/null || true' EXIT
+}
+
 run_terraform() {
   local terraform_dir
   terraform_dir="$DOTPATH/terraform"
@@ -492,6 +552,7 @@ run_terraform() {
     "-var=enable_macos_defaults=${enable_macos_defaults}"
     "-var=enable_1password_ssh=${enable_1password_ssh}"
     "-var=enable_linux_ssh_identity=$([ "$(detect_os)" = "linux" ] && echo true || echo false)"
+    "-var=enable_macos_tode=${enable_macos_tode}"
   )
 
   if [ ! -d "$terraform_dir" ]; then
@@ -512,6 +573,7 @@ run_terraform() {
       ;;
     apply)
       confirm_apply
+      prepare_sudo_for_brew
       info "Applying Terraform changes..."
       terraform -chdir="$terraform_dir" apply -auto-approve "${var_args[@]}"
       ;;

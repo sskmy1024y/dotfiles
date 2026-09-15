@@ -22,12 +22,6 @@ locals {
 
   base_links = [
     {
-      source          = "${local.dotfiles_root}/etc/scripts/deploy"
-      target          = "${local.home}/.local/bin/deploy"
-      force           = false
-      replace_symlink = false
-    },
-    {
       source          = "${local.dotfiles_root}/config/zsh/.zshrc"
       target          = "${local.home}/.zshrc"
       force           = false
@@ -66,12 +60,6 @@ locals {
     {
       source          = "${local.dotfiles_root}/config/git/.czrc"
       target          = "${local.home}/.czrc"
-      force           = false
-      replace_symlink = false
-    },
-    {
-      source          = "${local.dotfiles_root}/config/tmux/.tmux.conf"
-      target          = "${local.home}/.tmux.conf"
       force           = false
       replace_symlink = false
     },
@@ -214,18 +202,39 @@ resource "terraform_data" "linux_ssh_identity" {
   }
 }
 
-resource "terraform_data" "tpm" {
+resource "terraform_data" "tode" {
+  count = var.enable_macos_tode ? 1 : 0
+
+  input = {
+    dotfiles_root = local.dotfiles_root
+    home          = local.home
+  }
+
   triggers_replace = {
-    installer_sha256 = filesha256("${local.dotfiles_root}/etc/scripts/install.d/30_tmux.sh")
-    install_path     = "${local.home}/.tmux/plugins/tpm"
+    deploy_script_sha256 = filesha256("${local.dotfiles_root}/etc/scripts/deploy_tode")
+    config_sha256 = sha256(join("", [
+      for file in sort(fileset("${local.dotfiles_root}/config/tode", "**")) :
+      "${file}:${filesha256("${local.dotfiles_root}/config/tode/${file}")}"
+    ]))
   }
 
   provisioner "local-exec" {
     interpreter = ["bash", "-c"]
     environment = {
       DOTPATH = local.dotfiles_root
+      HOME    = local.home
     }
-    command = "bash \"$DOTPATH/etc/scripts/install.d/30_tmux.sh\""
+    command = "bash \"$DOTPATH/etc/scripts/deploy_tode\""
+  }
+
+  provisioner "local-exec" {
+    when        = destroy
+    interpreter = ["bash", "-c"]
+    environment = {
+      DOTPATH = self.input.dotfiles_root
+      HOME    = self.input.home
+    }
+    command = "bash \"$DOTPATH/etc/scripts/deploy_tode\" --clean"
   }
 }
 
@@ -237,8 +246,7 @@ module "symlinks" {
   links       = concat(local.base_links, local.optional_links, local.zsh_links, local.bin_links)
 
   depends_on = [
-    terraform_data.linux_ssh_identity,
-    terraform_data.tpm
+    terraform_data.linux_ssh_identity
   ]
 }
 
@@ -246,9 +254,9 @@ module "brew" {
   source = "./modules/brew"
 
   enabled       = var.enable_brew
-  brewfile_path = "${local.dotfiles_root}/etc/scripts/install.d/Brewfile"
+  brewfile_path = "${local.dotfiles_root}/config/homebrew/Brewfile"
 
-  depends_on = [module.symlinks]
+  depends_on = [module.symlinks, terraform_data.tode]
 }
 
 module "macos_defaults" {

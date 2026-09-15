@@ -24,8 +24,8 @@ test/
 ├── run_tests.sh            # Main test runner
 ├── test_helper.bash        # Common test helpers and utilities
 ├── test_header.bats        # Unit tests for header.sh functions
-├── test_symlink.bats       # Tests for symlink functionality
-├── test_deploy.bats        # Tests for deploy script
+├── test_cli.bats           # Tests for the public dotfiles CLI
+├── test_node_install.bats  # Tests for the Node runtime component
 ├── test_syntax.bats        # Syntax and linting tests
 └── README.md               # This file
 ```
@@ -57,12 +57,6 @@ cd ~/.dotfiles/test
 ```bash
 # Run only header function tests
 ./run_tests.sh header
-
-# Run only symlink tests
-./run_tests.sh symlink
-
-# Run only deploy tests
-./run_tests.sh deploy
 
 # Run only syntax tests
 ./run_tests.sh syntax
@@ -97,12 +91,8 @@ Tests individual functions from `etc/lib/header.sh`:
 - `wild_symlink()` - Wildcard symlink creation
 - Color output functions
 
-### 2. Integration Tests (`test_symlink.bats`, `test_deploy.bats`)
-Tests the integration of multiple components:
-- Symlink creation and management
-- Deploy script functionality
-- Directory creation with proper permissions
-- Error handling and edge cases
+### 2. Integration Tests (`test_cli.bats`, `test_tode.bats`)
+Tests the public CLI and host-specific integration components.
 
 ### 3. Code Quality Tests (`test_syntax.bats`)
 Ensures code quality and consistency:
@@ -116,7 +106,7 @@ Full installation tests in isolated environments:
 - Ubuntu installation test
 - Arch Linux installation test
 - Remote installation (one-liner)
-- Local installation (git clone + make)
+- Local installation from the mounted working tree
 - Bats tests execution in Docker
 
 ## Writing Bats Tests
@@ -247,8 +237,6 @@ make bats-file TEST_FILE=test/test_syntax.bats
 # Shortcuts for specific test suites
 make bats-syntax    # Syntax and linting tests
 make bats-header    # Header function tests
-make bats-symlink   # Symlink tests
-make bats-deploy    # Deploy script tests
 
 # Build the Bats Docker image
 make build-bats

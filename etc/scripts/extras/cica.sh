@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# 98_font.sh — Install the Cica programming font.
+# Install the Cica programming font.
 #
 # Cica ships from upstream already merged with Nerd Fonts glyphs (and
 # optionally Noto Color Emoji), so we do NOT need fontforge / nerd-fonts /
@@ -28,7 +28,7 @@ fi
 . "$DOTPATH"/etc/lib/header.sh
 
 echo ""
-info "98 Install Cica font (already Nerd-Font-patched upstream)"
+info "Install Cica font (already Nerd-Font-patched upstream)"
 echo ""
 
 # Pick OS-appropriate user font directory.

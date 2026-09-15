@@ -109,11 +109,12 @@ run_bats_test() {
 # Run all tests
 run_all_tests() {
     local test_files=(
+        "test_cli.bats:Unit Tests - Dotfiles CLI"
         "test_header.bats:Unit Tests - Header Functions"
         "test_bootstrap.bats:Unit Tests - Bootstrap"
         "test_macos.bats:Unit Tests - macOS Helpers"
-        "test_symlink.bats:Integration Tests - Symlinks"
-        "test_deploy.bats:Integration Tests - Deploy Script"
+        "test_node_install.bats:Unit Tests - Node Runtime Installer"
+        "test_tode.bats:Integration Tests - Tode Configuration"
         "test_syntax.bats:Code Quality - Syntax & Linting"
     )
     
@@ -176,17 +177,23 @@ test_individual() {
     
     # Map test names to files
     case "$test" in
+        cli)
+            run_bats_test "Dotfiles CLI Tests" "$TEST_DIR/test_cli.bats"
+            ;;
+        bootstrap)
+            run_bats_test "Bootstrap Tests" "$TEST_DIR/test_bootstrap.bats"
+            ;;
         header)
             run_bats_test "Header Function Tests" "$TEST_DIR/test_header.bats"
-            ;;
-        symlink)
-            run_bats_test "Symlink Tests" "$TEST_DIR/test_symlink.bats"
             ;;
         macos)
             run_bats_test "macOS Helper Tests" "$TEST_DIR/test_macos.bats"
             ;;
-        deploy)
-            run_bats_test "Deploy Script Tests" "$TEST_DIR/test_deploy.bats"
+        node)
+            run_bats_test "Node Runtime Installer Tests" "$TEST_DIR/test_node_install.bats"
+            ;;
+        tode)
+            run_bats_test "Tode Configuration Tests" "$TEST_DIR/test_tode.bats"
             ;;
         syntax)
             run_bats_test "Syntax Tests" "$TEST_DIR/test_syntax.bats"
@@ -204,7 +211,7 @@ test_individual() {
             ;;
         *)
             echo -e "${RED}Error: Unknown test: $test${NC}"
-            echo "Available tests: header, symlink, macos, deploy, syntax"
+            echo "Available tests: cli, bootstrap, header, macos, node, tode, syntax"
             echo "Or specify a .bats file directly"
             exit 1
             ;;
@@ -239,10 +246,12 @@ usage() {
     echo "  --tap          Output TAP format"
     echo ""
     echo "Tests:"
+    echo "  cli            Run dotfiles CLI tests"
+    echo "  bootstrap      Run bootstrap tests"
     echo "  header         Run header.sh function tests"
-    echo "  symlink        Run symlink functionality tests"
     echo "  macos          Run macOS helper tests"
-    echo "  deploy         Run deploy script tests"
+    echo "  node           Run Node runtime installer tests"
+    echo "  tode           Run Tode configuration tests"
     echo "  syntax         Run syntax and linting tests"
     echo ""
     echo "Examples:"

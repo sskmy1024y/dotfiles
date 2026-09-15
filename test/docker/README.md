@@ -203,7 +203,7 @@ make bats-ci OS=ubuntu
 # Run specific test file or suite
 make bats-test TEST=syntax                # Runs test/test_syntax.bats on both OS
 make bats-test TEST=header OS=ubuntu      # Runs test/test_header.bats on Ubuntu only
-make bats-test TEST=test/test_deploy.bats # Full path also works
+make bats-test TEST=test/test_cli.bats    # Full path also works
 ```
 
 ### Debugging Bats Tests

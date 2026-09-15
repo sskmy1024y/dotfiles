@@ -2,8 +2,8 @@
 #
 # macos.sh — Shared macOS bootstrap helpers.
 #
-# Sourced by install.d/* scripts that need to ensure Xcode Command Line
-# Tools and Homebrew are present, without GUI prompts or duplicated logic.
+# Sourced by installer and optional components that need Xcode Command Line
+# Tools and Homebrew, without GUI prompts or duplicated logic.
 #
 # Conventions:
 #   - All functions are idempotent (safe to call repeatedly).
@@ -125,14 +125,14 @@ brew_install_default_formulas() {
   if [ -n "$unwritable_paths" ]; then
     if [ "${#missing[@]}" -eq 0 ]; then
       warn "brew: all default packages are installed, but Homebrew has unwritable directories; skip upgrades"
-      warn "brew: fix ownership later if you want upgrades to run during init:"
+      warn "brew: fix ownership later if you want upgrades during full setup:"
       printf "%s\n" "$unwritable_paths" | sed 's/^/  /'
       return 0
     fi
 
     error "brew: Homebrew has unwritable directories and missing packages must be installed: ${missing[*]}"
     printf "%s\n" "$unwritable_paths" | sed 's/^/  /'
-    error "brew: fix these paths, then rerun make init"
+    error "brew: fix these paths, then rerun 'dotfiles install'"
     return 1
   fi
 
@@ -229,7 +229,7 @@ ensure_homebrew() {
     return 0
   fi
 
-  # Maybe brew is installed but not on PATH (e.g. fresh `make init`).
+  # Maybe brew is installed but not on PATH in this non-login shell.
   brew_on_path
   if command -v brew >/dev/null 2>&1; then
     info "Homebrew found at $(command -v brew) (added to PATH)"

@@ -1,5 +1,7 @@
 # Dockerfile for testing dotfiles installation on Ubuntu
-FROM ubuntu:latest
+# Keep the container aligned with GitHub's ubuntu-latest runner. Pinning the
+# LTS release also prevents a new Ubuntu release from changing tests overnight.
+FROM ubuntu:24.04
 
 # Install prerequisites
 RUN apt-get update && apt-get install -y \

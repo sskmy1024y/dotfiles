@@ -16,7 +16,7 @@ fi
 
 
 echo ""
-info "21 Install Node"
+info "Install Node"
 echo ""
 
 anyenv_on_path() {
@@ -102,7 +102,7 @@ install_node(){
     info "Installed node $node_version"
   else
     warn "nodenv not found. installing..."
-    bash "$DOTPATH"/etc/scripts/install.d/20_anyenv.sh
+    bash "$DOTPATH"/etc/scripts/runtimes/anyenv.sh
     anyenv_on_path
     if ! is_exists "nodenv"; then
       error "nodenv is not available after anyenv install"
