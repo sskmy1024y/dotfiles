@@ -22,8 +22,6 @@ else
   export ZPLUG_HOME=$HOME/.zplug
 fi
 
-export PATH=$HOME/.rbenv/bin:$PATH
 export PATH=$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH
-export PATH=$HOME/.pyenv/bin:$PATH
 
 export TERM=xterm-256color

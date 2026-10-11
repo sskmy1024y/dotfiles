@@ -83,3 +83,12 @@ shell_scripts() {
     assert_not_exists "$DOTPATH/etc/scripts/deploy"
     assert_not_exists "$DOTPATH/etc/scripts/init"
 }
+
+@test "full setup manages mise on macOS and Linux" {
+    run grep -F 'install_mise_standalone' "$DOTPATH/etc/install"
+
+    assert_success
+    assert_file_contains "$DOTPATH/config/homebrew/Brewfile" 'brew "mise"'
+    assert_file_contains "$DOTPATH/terraform/main.tf" 'config/mise/config.toml'
+    assert_not_exists "$DOTPATH/etc/scripts/runtimes/anyenv.sh"
+}

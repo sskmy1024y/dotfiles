@@ -256,27 +256,62 @@ ensure_jq() {
   is_exists jq
 }
 
+mise_on_path() {
+  if is_exists mise; then
+    return 0
+  fi
+
+  if [ -x "$HOME/.local/bin/mise" ]; then
+    PATH="$HOME/.local/bin:$PATH"
+    export PATH
+    return 0
+  fi
+
+  return 1
+}
+
+install_mise_standalone() {
+  mise_on_path && return 0
+
+  info "Installing mise..."
+  mkdir -p "$HOME/.local/bin"
+  if is_exists curl; then
+    curl -fsSL https://mise.run | MISE_INSTALL_PATH="$HOME/.local/bin/mise" sh
+  elif is_exists wget; then
+    wget -qO- https://mise.run | MISE_INSTALL_PATH="$HOME/.local/bin/mise" sh
+  else
+    error "curl or wget is required to install mise"
+    return 1
+  fi
+  mise_on_path
+}
+
 ensure_managed_packages() {
   if [ "$enable_packages" != "true" ] || [ "$(detect_os)" != "linux" ]; then
     return 0
   fi
 
-  # Homebrew packages are applied declaratively by Terraform. Linux currently
-  # has one cross-distribution interactive tool managed by the full setup.
-  if is_exists fzf; then
-    return 0
-  fi
-
+  # Homebrew packages are applied declaratively by Terraform. Linux has a few
+  # cross-distribution tools managed by the full setup instead.
   if [ "$mode" = "plan" ]; then
     return 0
   fi
 
   if [ "$mode" = "check" ]; then
-    error "fzf: command not found"
-    return 1
+    local missing=0
+    is_exists fzf || { error "fzf: command not found"; missing=1; }
+    mise_on_path || { error "mise: command not found"; missing=1; }
+    return "$missing"
   fi
 
-  install_platform_package fzf fzf && is_exists fzf
+  if ! is_exists fzf; then
+    install_platform_package fzf fzf || return 1
+    is_exists fzf || return 1
+  fi
+
+  # mise is not packaged by every distribution, so use the official
+  # standalone installer for a consistent ~/.local/bin/mise.
+  install_mise_standalone
 }
 
 terraform_version() {
@@ -389,6 +424,11 @@ missing_runtime_commands() {
 
   if [ "$enable_packages" = "true" ] && [ "$(detect_os)" = "linux" ] && ! is_exists fzf; then
     error "fzf: command not found"
+    missing=1
+  fi
+
+  if [ "$enable_packages" = "true" ] && [ "$(detect_os)" = "linux" ] && ! mise_on_path; then
+    error "mise: command not found"
     missing=1
   fi
 

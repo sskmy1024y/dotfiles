@@ -22,7 +22,7 @@ Usage: dotfiles <command> [options]
 Commands:
   install     Apply the full setup: configuration, packages, and OS settings.
   sync        Sync managed configuration without packages or OS settings.
-  runtimes    Install anyenv, Node.js, and Python.
+  runtimes    Install mise and the runtimes in config/mise/config.toml.
   extras      Install optional applications, fonts, and advanced settings.
   plan        Preview Terraform-managed changes.
   check       Check installer requirements without changing the system.
@@ -80,12 +80,8 @@ run_sync() {
 }
 
 run_runtimes() {
-  local component
-
   require_checkout
-  for component in anyenv node python; do
-    bash "$DOTPATH/etc/scripts/runtimes/${component}.sh" "$@"
-  done
+  bash "$DOTPATH/etc/scripts/runtimes/mise.sh" "$@"
 }
 
 run_extras() {

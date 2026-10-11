@@ -28,8 +28,8 @@ locals {
       replace_symlink = false
     },
     {
-      source          = "${local.dotfiles_root}/config/goenv/.goenvrc"
-      target          = "${local.home}/.goenvrc"
+      source          = "${local.dotfiles_root}/config/mise/config.toml"
+      target          = "${local.home}/.config/mise/config.toml"
       force           = false
       replace_symlink = false
     },

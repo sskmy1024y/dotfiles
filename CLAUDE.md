@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### CLI Commands
 - `dotfiles install` - Apply configuration, managed packages, and OS settings
 - `dotfiles sync` - Sync configuration without packages or OS settings
-- `dotfiles runtimes` - Install anyenv, Node.js, and Python
+- `dotfiles runtimes` - Install mise and the runtimes in `config/mise/config.toml`
 - `dotfiles extras` - Install optional applications, Cica, and macOS integration
 - `dotfiles plan` / `check` / `status` - Inspect the managed setup
 - `dotfiles update` / `clean` - Update the checkout or destroy Terraform resources
@@ -52,7 +52,8 @@ The root Makefile contains test and VM harness targets only.
 ### Script Architecture
 - `bin/dotfiles` - Only public operational CLI
 - `etc/install` - Bootstrap requirements and Terraform orchestration
-- `etc/scripts/runtimes/` - Explicit anyenv, Node.js, and Python components
+- `etc/scripts/runtimes/mise.sh` - Installs mise (Homebrew on macOS, `mise.run` to `~/.local/bin` on Linux) and runs `mise install`
+- `config/mise/config.toml` - Global mise tools/settings, symlinked to `~/.config/mise/config.toml` (idiomatic version files such as `.node-version` are opted in here)
 - `etc/scripts/extras/` - Explicit optional application, Cica, and macOS components
 - `config/homebrew/Brewfile` - Homebrew package manifest
 - `etc/lib/header.sh` - Shared functions for symlink creation, OS detection, and colored output
@@ -60,7 +61,7 @@ The root Makefile contains test and VM harness targets only.
 
 ### Installation flow
 1. `etc/bootstrap` obtains the repository and invokes `dotfiles install`.
-2. `etc/install` ensures required tools, installs `fzf` on Linux, and applies Terraform.
+2. `etc/install` ensures required tools, installs `fzf` and `mise` on Linux, and applies Terraform.
 3. Terraform owns symlinks, the Linux SSH identity, Homebrew bundle, macOS defaults, and Tode integration.
 4. `dotfiles runtimes` and `dotfiles extras` run only their explicit optional components.
 
