@@ -33,7 +33,7 @@ zinit light-mode for \
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}' ## 補完で小文字でも大文字にマッチさせる
 zstyle ':completion:*:default' menu select=1 ## 補完候補を一覧表示したとき、Tabや矢印で選択できるようにする
 
-zinit ice wait'0'; zinit light zsh-users/zsh-completions
+zinit ice wait'0' lucid; zinit light zsh-users/zsh-completions ## lucid: Turbo 読み込み時の "Loaded ..." 表示を抑止
 zinit light zsh-users/zsh-syntax-highlighting ## シンタックスハイライト
 zinit light zsh-users/zsh-autosuggestions ## 履歴補完
 zinit ice depth=1; zinit light romkatv/powerlevel10k ## powerlevel10k
