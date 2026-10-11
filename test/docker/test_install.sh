@@ -167,6 +167,8 @@ verify_installation() {
     assert_exists "$HOME/.ssh/github-key.pub" "GitHub SSH public key"
     assert_exists "$(command -v jq || true)" "jq command"
     assert_exists "$(command -v fzf || true)" "fzf command"
+    assert_exists "$HOME/.local/bin/mise" "mise command"
+    assert_symlink "$HOME/.config/mise/config.toml" "mise global config"
 
     # Check permissions
     echo -e "\n--- Checking permissions ---"

@@ -1,7 +1,7 @@
 {
   "chat.titleBar.openInAgentsWindow.enabled": false,
   "js/ts.tsdk.additionalLocations": [
-    "~/.anyenv/envs/nodenv/shims/tsgo"
+    "~/.local/share/mise/shims/tsgo"
   ],
   "js/ts.experimental.useTsgo": true,
   "yaml.disableSchemaDetection": [
@@ -127,7 +127,7 @@
   "typescript.disableAutomaticTypeAcquisition": true,
   "typescript.tsserver.log": "off",
   "typescript.tsserver.maxTsServerMemory": 8192,
-  "intelephense.runtime": "/Users/sho/.anyenv/envs/nodenv/shims/node",
+  "intelephense.runtime": "/Users/sho/.local/share/mise/shims/node",
   "notebook.cellToolbarLocation": {
     "default": "right",
     "jupyter-notebook": "left"
@@ -179,9 +179,9 @@
   },
   "go.toolsManagement.autoUpdate": true,
   "diffEditor.ignoreTrimWhitespace": true,
-  "elmLS.elmTestPath": "~/.nodenv/shims/elm-test",
-  "elmLS.elmPath": "~/.nodenv/shims/elm",
-  "elmLS.elmFormatPath": "~/.nodenv/shims/elm-format",
+  "elmLS.elmTestPath": "~/.local/share/mise/shims/elm-test",
+  "elmLS.elmPath": "~/.local/share/mise/shims/elm",
+  "elmLS.elmFormatPath": "~/.local/share/mise/shims/elm-format",
   "githubIssues.queries": [
     {
       "label": "My Issues",

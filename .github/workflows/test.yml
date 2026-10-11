@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test: [cli, bootstrap, header, macos, node, tode, syntax]
+        test: [cli, bootstrap, header, macos, mise, tode, syntax]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -201,7 +201,7 @@ jobs:
 
       - name: Clear conflicting dotfiles
         run: |
-          for file in .zshrc .gitconfig .gitignore.global .czrc .goenvrc .ssh/config; do
+          for file in .zshrc .gitconfig .gitignore.global .czrc .config/mise/config.toml .ssh/config; do
             if [ -e "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
               echo "Moving existing $file to $file.backup"
               mkdir -p "$(dirname "$HOME/$file.backup")"
@@ -313,7 +313,7 @@ jobs:
 
       - name: Clear conflicting dotfiles
         run: |
-          for file in .zshrc .gitconfig .gitignore.global .czrc .goenvrc .ssh/config; do
+          for file in .zshrc .gitconfig .gitignore.global .czrc .config/mise/config.toml .ssh/config; do
             if [ -e "$HOME/$file" ] && [ ! -L "$HOME/$file" ]; then
               echo "Moving existing $file to $file.backup"
               mkdir -p "$(dirname "$HOME/$file.backup")"

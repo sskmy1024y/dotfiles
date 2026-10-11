@@ -33,7 +33,7 @@ dotfiles/
  │   ├── install     # Remote installer
  │   ├── lib         # Shared installer helpers
  │   └── scripts
- │       ├── runtimes # anyenv, Node.js, and Python installers
+ │       ├── runtimes # mise runtime installer
  │       └── extras   # Optional applications, Cica, and macOS integration
  ├── terraform/      # Terraform entrypoint and modules
  ├── test/           # Test suite
@@ -109,7 +109,7 @@ The setup links `bin/dotfiles` to `~/.local/bin/dotfiles`. Make sure
 | --- | --- |
 | `dotfiles install` | Apply the full setup: managed configuration, packages, and OS settings. |
 | `dotfiles sync` | Sync managed configuration without installing packages or applying OS settings. |
-| `dotfiles runtimes` | Optionally install anyenv, Node.js, and Python. |
+| `dotfiles runtimes` | Optionally install mise and the runtimes declared in `config/mise/config.toml`. |
 | `dotfiles extras` | Optionally install extra applications, Cica, and advanced OS settings. |
 | `dotfiles plan` | Preview Terraform-managed changes without applying them. |
 | `dotfiles check` | Check installer requirements without changing the system. |

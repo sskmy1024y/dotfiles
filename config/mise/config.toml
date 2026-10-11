@@ -1,0 +1,21 @@
+# mise global configuration (~/.config/mise/config.toml)
+# Managed by dotfiles. Project-local versions belong in each repository's
+# mise.toml or idiomatic version files.
+
+[tools]
+node = "lts"
+pnpm = "latest"
+python = "3.14"
+uv = "latest"
+"pypi:pipenv" = "latest"
+
+[settings]
+# Read version files used by other version managers so existing projects keep
+# working without a mise.toml:
+#   node   -> .node-version / .nvmrc / package.json devEngines
+#   pnpm   -> package.json packageManager / devEngines.packageManager
+#   yarn   -> package.json packageManager / devEngines.packageManager
+#   python -> .python-version
+#   go     -> .go-version
+#   ruby   -> .ruby-version
+idiomatic_version_file_enable_tools = ["node", "pnpm", "yarn", "python", "go", "ruby"]

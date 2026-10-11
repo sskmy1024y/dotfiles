@@ -18,7 +18,7 @@ setup() {
 printf 'install:%s\n' "$*" >> "$CLI_MARKER"
 INSTALL
     local component
-    for component in anyenv node python; do
+    for component in mise; do
         cat > "$DOTPATH/etc/scripts/runtimes/$component.sh" <<'RUNTIME'
 #!/usr/bin/env bash
 printf 'runtime:%s:%s\n' "$(basename "$0" .sh)" "$*" >> "$CLI_MARKER"
@@ -75,9 +75,7 @@ teardown() {
     run bash "$DOTFILES_SOURCE/bin/dotfiles" runtimes
 
     assert_success
-    assert_file_contains "$CLI_MARKER" "runtime:anyenv:"
-    assert_file_contains "$CLI_MARKER" "runtime:node:"
-    assert_file_contains "$CLI_MARKER" "runtime:python:"
+    assert_file_contains "$CLI_MARKER" "runtime:mise:"
 }
 
 @test "extras runs the explicit optional components" {

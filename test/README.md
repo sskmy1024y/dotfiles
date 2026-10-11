@@ -25,7 +25,7 @@ test/
 ├── test_helper.bash        # Common test helpers and utilities
 ├── test_header.bats        # Unit tests for header.sh functions
 ├── test_cli.bats           # Tests for the public dotfiles CLI
-├── test_node_install.bats  # Tests for the Node runtime component
+├── test_mise_install.bats  # Tests for the mise runtime component
 ├── test_syntax.bats        # Syntax and linting tests
 └── README.md               # This file
 ```
