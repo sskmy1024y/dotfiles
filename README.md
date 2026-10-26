@@ -26,6 +26,7 @@ dotfiles/
  │   ├── homebrew    # Homebrew package manifest
  │   ├── iterm       # iTerm2 configuration
  │   ├── ssh         # SSH configuration
+ │   ├── t3code      # T3 Code settings (Linux)
  │   ├── tode        # Tode and Ghostty integration (macOS)
  │   └── zsh         # Zsh shell configuration
  ├── doc/            # Document files

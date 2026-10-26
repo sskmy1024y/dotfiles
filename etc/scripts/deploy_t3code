@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+trap 'echo Error: $0:$LINENO stopped; exit 1' ERR INT
+set -euo pipefail
+
+if [ -z "${DOTPATH:-}" ]; then
+  DOTPATH="$HOME/.dotfiles"
+  export DOTPATH
+fi
+
+. "$DOTPATH/etc/lib/header.sh"
+
+os="${DOTFILES_OS_OVERRIDE:-$(detect_os)}"
+if [ "$os" = "darwin" ]; then
+  exit 0
+fi
+
+t3_home="${T3CODE_HOME:-$HOME/.t3}"
+settings_source="$DOTPATH/config/t3code/settings.json"
+settings_target="$t3_home/userdata/settings.json"
+
+install_t3() {
+  if is_exists t3 || [ -x "$HOME/.local/bin/t3" ]; then
+    return 0
+  fi
+
+  info "Installing T3 Code..."
+  curl -fsSL https://t3.codes/install.sh | sh
+}
+
+# T3 rewrites settings.json atomically (a symlink would be replaced), so merge
+# the managed keys into the live file instead; settings changed in the UI stay.
+merge_settings() {
+  local temporary
+
+  mkdir -p "$(dirname "$settings_target")"
+  if [ ! -s "$settings_target" ]; then
+    cp "$settings_source" "$settings_target"
+    return 0
+  fi
+
+  temporary="$(mktemp "${settings_target}.tmp.XXXXXX")"
+  jq -s '.[0] * .[1]' "$settings_target" "$settings_source" > "$temporary"
+  mv "$temporary" "$settings_target"
+}
+
+info "t3code..."
+if [ "${DOTFILES_T3CODE_SKIP_INSTALL:-}" != 1 ]; then
+  install_t3
+fi
+merge_settings

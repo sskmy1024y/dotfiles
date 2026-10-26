@@ -238,6 +238,24 @@ resource "terraform_data" "tode" {
   }
 }
 
+resource "terraform_data" "t3code" {
+  count = var.enable_linux_t3code ? 1 : 0
+
+  triggers_replace = {
+    deploy_script_sha256 = filesha256("${local.dotfiles_root}/etc/scripts/deploy_t3code")
+    settings_sha256      = filesha256("${local.dotfiles_root}/config/t3code/settings.json")
+  }
+
+  provisioner "local-exec" {
+    interpreter = ["bash", "-c"]
+    environment = {
+      DOTPATH = local.dotfiles_root
+      HOME    = local.home
+    }
+    command = "bash \"$DOTPATH/etc/scripts/deploy_t3code\""
+  }
+}
+
 module "symlinks" {
   source = "./modules/symlink"
 
