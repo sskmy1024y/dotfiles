@@ -27,3 +27,9 @@ variable "enable_macos_tode" {
   type        = bool
   default     = true
 }
+
+variable "enable_linux_t3code" {
+  description = "Install T3 Code and merge its managed settings on Linux."
+  type        = bool
+  default     = false
+}

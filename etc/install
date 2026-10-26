@@ -286,6 +286,21 @@ install_mise_standalone() {
   mise_on_path
 }
 
+# The T3 Code release binary links against libatomic, which minimal images lack.
+ensure_libatomic() {
+  local package="libatomic1"
+
+  { ldconfig -p 2>/dev/null || /sbin/ldconfig -p 2>/dev/null || true; } | grep -q 'libatomic\.so\.1' && return 0
+  if is_exists apt-get; then
+    package="libatomic1"
+  elif is_exists pacman; then
+    package="gcc-libs"
+  elif is_exists dnf || is_exists yum || is_exists apk; then
+    package="libatomic"
+  fi
+  install_platform_package libatomic "$package"
+}
+
 ensure_managed_packages() {
   if [ "$enable_packages" != "true" ] || [ "$(detect_os)" != "linux" ]; then
     return 0
@@ -308,6 +323,8 @@ ensure_managed_packages() {
     install_platform_package fzf fzf || return 1
     is_exists fzf || return 1
   fi
+
+  ensure_libatomic || return 1
 
   # mise is not packaged by every distribution, so use the official
   # standalone installer for a consistent ~/.local/bin/mise.
@@ -593,6 +610,7 @@ run_terraform() {
     "-var=enable_1password_ssh=${enable_1password_ssh}"
     "-var=enable_linux_ssh_identity=$([ "$(detect_os)" = "linux" ] && echo true || echo false)"
     "-var=enable_macos_tode=${enable_macos_tode}"
+    "-var=enable_linux_t3code=$([ "$(detect_os)" = "linux" ] && [ "$enable_packages" = "true" ] && echo true || echo false)"
   )
 
   if [ ! -d "$terraform_dir" ]; then

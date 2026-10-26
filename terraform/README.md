@@ -39,6 +39,7 @@ terraform apply -target=module.macos_defaults
 - `enable_macos_defaults`: write macOS defaults.
 - `enable_1password_ssh`: link the 1Password SSH config.
 - `enable_macos_tode`: link the Tode and Ghostty integration on macOS.
+- `enable_linux_t3code`: install T3 Code and merge `config/t3code/settings.json` into `~/.t3/userdata/settings.json` on Linux.
 
 The CLI disables macOS-only variables on other platforms.
 

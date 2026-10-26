@@ -1,0 +1,6 @@
+{
+  "defaultAutoPull": true,
+  "projectSettingsFolded": true,
+  "idleCompaction": "onReturn",
+  "removeAgentCreditsOnMerge": true
+}
